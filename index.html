@@ -5,330 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LANDIER · Find Land. Make It Yours.</title>
   
-  <!-- Fonts & Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@0.453.0/font/lucide.css">
-  
-  <!-- Firebase SDKs (Loaded as modules) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    // YOUR FIREBASE CONFIG
-    const firebaseConfig = {
-      apiKey: "AIzaSyACuvTi-yMGkQ4nojapLYeJ8tOZlty2fpI",
-      authDomain: "gumado.firebaseapp.com",
-      projectId: "gumado",
-      storageBucket: "gumado.firebasestorage.app",
-      messagingSenderId: "220205636823",
-      appId: "1:220205636823:web:e194c0bdf9f0e94dfe6492",
-      measurementId: "G-P9B3XKTYDS"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // Make Firebase available globally for the inline script
-    window.firebaseAuth = auth;
-    window.firebaseDb = db;
-    window.firebaseFuncs = {
-      createUserWithEmailAndPassword,
-      signInWithEmailAndPassword,
-      signOut,
-      sendPasswordResetEmail,
-      onAuthStateChanged,
-      collection,
-      doc,
-      setDoc,
-      getDoc,
-      getDocs,
-      addDoc,
-      updateDoc,
-      deleteDoc,
-      query,
-      where,
-      serverTimestamp
-    };
-  </script>
-
-  <style>
-    /* ============================================================
-       GLOBAL RESET & DESIGN TOKENS
-       ============================================================ */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --green: #1e7e34;
-      --green-light: #e6f4ea;
-      --green-dark: #0f4d1f;
-      --gray-bg: #f8f9fc;
-      --gray-surface: #ffffff;
-      --gray-border: #e9ecf0;
-      --gray-text: #1e293b;
-      --gray-muted: #64748b;
-      --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.04);
-      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
-      --radius-card: 18px;
-      --radius-btn: 30px;
-      --radius-sm: 12px;
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-    body {
-      font-family: var(--font);
-      background: var(--gray-bg);
-      color: var(--gray-text);
-      line-height: 1.4;
-      -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-      padding-bottom: 70px;
-    }
-    h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; }
-    .price { font-weight: 700; color: var(--green-dark); font-size: 1.1rem; }
-    .hidden { display: none !important; }
-    .flex { display: flex; }
-    .gap-8 { gap: 8px; }
-    .mt-8 { margin-top: 8px; }
-    .mb-16 { margin-bottom: 16px; }
-
-    /* ============================================================
-       LAYOUT & SCREENS
-       ============================================================ */
-    .app-container {
-      max-width: 480px;
-      margin: 0 auto;
-      background: var(--gray-bg);
-      min-height: 100vh;
-      position: relative;
-      box-shadow: 0 0 40px rgba(0,0,0,0.02);
-    }
-    .screen { display: none; flex-direction: column; animation: fade 0.2s ease; }
-    .screen.active { display: flex; }
-    @keyframes fade { from { opacity: 0.6; } to { opacity: 1; } }
-
-    /* ============================================================
-       AUTH SCREEN
-       ============================================================ */
-    #authScreen { padding: 24px 20px; background: white; min-height: 100vh; }
-    .logo-large { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; color: var(--green); margin-bottom: 4px; }
-    .tagline { color: var(--gray-muted); font-size: 0.9rem; margin-bottom: 32px; }
-    .auth-form { display: flex; flex-direction: column; gap: 16px; }
-    .input-group { display: flex; flex-direction: column; gap: 6px; }
-    .input-group label { font-size: 0.85rem; font-weight: 500; color: var(--gray-muted); }
-    .input-wrapper { position: relative; display: flex; align-items: center; }
-    .input-wrapper i { position: absolute; left: 14px; color: var(--gray-muted); font-size: 1.1rem; }
-    .input-wrapper input, .input-wrapper select {
-      width: 100%; padding: 14px 14px 14px 44px;
-      border: 1.5px solid var(--gray-border); border-radius: var(--radius-btn);
-      font-family: var(--font); font-size: 0.95rem; background: var(--gray-bg); transition: 0.2s;
-    }
-    .input-wrapper input:focus, .input-wrapper select:focus { outline: none; border-color: var(--green); background: white; }
-    .password-toggle { position: absolute; right: 14px; background: none; border: none; color: var(--gray-muted); font-size: 1.1rem; cursor: pointer; }
-    .btn-primary {
-      background: var(--green); color: white; border: none; padding: 16px;
-      border-radius: var(--radius-btn); font-weight: 600; font-size: 1rem;
-      cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    .btn-primary:hover { background: var(--green-dark); }
-    .btn-secondary {
-      background: transparent; border: 1.5px solid var(--gray-border); padding: 14px;
-      border-radius: var(--radius-btn); font-weight: 500; cursor: pointer; transition: 0.2s; color: var(--gray-text);
-    }
-    .btn-secondary:hover { background: var(--gray-bg); }
-    .auth-switch { text-align: center; margin-top: 16px; color: var(--gray-muted); font-size: 0.9rem; }
-    .auth-switch a { color: var(--green); font-weight: 600; text-decoration: none; cursor: pointer; }
-    .demo-hint { font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 20px; }
-
-    /* ============================================================
-       HOME SCREEN
-       ============================================================ */
-    .home-header {
-      padding: 20px 16px 8px; display: flex; justify-content: space-between;
-      align-items: center; background: white;
-    }
-    .welcome-text h2 { font-size: 1.4rem; font-weight: 700; }
-    .welcome-text p { font-size: 0.8rem; color: var(--gray-muted); }
-    .header-actions { display: flex; gap: 16px; }
-    .icon-btn {
-      background: none; border: none; font-size: 1.3rem; color: var(--gray-text);
-      cursor: pointer; position: relative;
-    }
-    .icon-btn .dot {
-      position: absolute; top: -2px; right: -2px; width: 8px; height: 8px;
-      background: #e11d48; border-radius: 50%; border: 2px solid white;
-    }
-    .search-bar { padding: 8px 16px 12px; background: white; }
-    .search-inner {
-      display: flex; align-items: center; background: var(--gray-bg);
-      border-radius: var(--radius-btn); padding: 6px 6px 6px 18px; border: 1px solid var(--gray-border);
-    }
-    .search-inner i { color: var(--gray-muted); font-size: 1.1rem; }
-    .search-inner input {
-      flex: 1; border: none; background: transparent; padding: 12px 10px;
-      font-family: var(--font); font-size: 0.95rem; outline: none;
-    }
-    .filter-btn {
-      background: white; border: 1px solid var(--gray-border); border-radius: 50%;
-      width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer;
-    }
-    .categories {
-      display: flex; gap: 8px; padding: 8px 16px 16px; overflow-x: auto;
-      background: white; scrollbar-width: none;
-    }
-    .categories::-webkit-scrollbar { display: none; }
-    .cat-chip {
-      padding: 10px 20px; background: var(--gray-bg); border-radius: var(--radius-btn);
-      font-size: 0.9rem; font-weight: 500; white-space: nowrap; cursor: pointer;
-      transition: 0.2s; border: 1px solid transparent;
-    }
-    .cat-chip.active { background: var(--green); color: white; }
-    .section-title { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 8px; }
-    .section-title h3 { font-size: 1.1rem; }
-    .section-title span { font-size: 0.85rem; color: var(--green); font-weight: 500; cursor: pointer; }
-    .property-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px 16px; }
-    .property-card {
-      background: white; border-radius: var(--radius-card); overflow: hidden;
-      box-shadow: var(--shadow-sm); transition: 0.2s; cursor: pointer; position: relative;
-    }
-    .property-card:active { transform: scale(0.98); }
-    .card-image { position: relative; aspect-ratio: 1 / 1; background: #eef1f5; }
-    .card-image img { width: 100%; height: 100%; object-fit: cover; }
-    .fav-btn {
-      position: absolute; top: 8px; right: 8px; background: rgba(255, 255, 255, 0.9);
-      border: none; border-radius: 50%; width: 32px; height: 32px;
-      display: flex; align-items: center; justify-content: center; cursor: pointer;
-      color: #94a3b8; font-size: 0.9rem; backdrop-filter: blur(4px);
-    }
-    .fav-btn.saved { color: #e11d48; }
-    .badge-featured {
-      position: absolute; top: 8px; left: 8px; background: var(--green); color: white;
-      font-size: 0.65rem; padding: 3px 10px; border-radius: 20px; font-weight: 600;
-    }
-    .card-content { padding: 10px 10px 12px; }
-    .card-title { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .card-price { font-size: 1rem; font-weight: 700; color: var(--green-dark); margin: 2px 0; }
-    .card-location { font-size: 0.7rem; color: var(--gray-muted); display: flex; align-items: center; gap: 4px; }
-    .card-specs { font-size: 0.65rem; color: var(--gray-muted); margin-top: 2px; }
-    .availability {
-      font-size: 0.65rem; color: var(--green); font-weight: 500; margin-top: 4px;
-      display: inline-block; background: var(--green-light); padding: 2px 8px; border-radius: 20px;
-    }
-    .availability.sold { background: #fee2e2; color: #991b1b; }
-    .availability.reserved { background: #fef3c7; color: #92400e; }
-    .availability.pending { background: #e0f2fe; color: #0369a1; }
-
-    /* ============================================================
-       BOTTOM NAV
-       ============================================================ */
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px;
-      margin: 0 auto; background: white; display: flex; justify-content: space-around;
-      padding: 10px 0 14px; border-top: 1px solid var(--gray-border);
-      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.02); z-index: 100;
-    }
-    .nav-item {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      font-size: 0.7rem; color: var(--gray-muted); cursor: pointer;
-      transition: 0.2s; background: none; border: none; font-family: var(--font);
-    }
-    .nav-item i { font-size: 1.3rem; }
-    .nav-item.active { color: var(--green); font-weight: 600; }
-    .nav-item.active i { color: var(--green); }
-
-    /* ============================================================
-       EXPLORE / MAP
-       ============================================================ */
-    #exploreScreen .map-container { padding: 16px; height: calc(100vh - 70px); display: flex; flex-direction: column; }
-    .map-placeholder {
-      background: #eef1f5; border-radius: var(--radius-card); flex: 1;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 12px; color: var(--gray-muted); border: 1px dashed var(--gray-border); padding: 24px; text-align: center;
-    }
-    .map-placeholder i { font-size: 3rem; color: var(--green); opacity: 0.5; }
-
-    /* ============================================================
-       SAVED
-       ============================================================ */
-    #savedScreen .property-grid { padding-top: 8px; }
-
-    /* ============================================================
-       MESSAGES
-       ============================================================ */
-    .conversation-list { padding: 8px 16px; }
-    .conversation-item {
-      display: flex; gap: 12px; padding: 14px 0;
-      border-bottom: 1px solid var(--gray-border); cursor: pointer;
-    }
-    .conv-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: var(--green-light); }
-    .conv-info { flex: 1; }
-    .conv-name { font-weight: 600; font-size: 0.95rem; }
-    .conv-property { font-size: 0.75rem; color: var(--green); font-weight: 500; }
-    .conv-preview { font-size: 0.8rem; color: var(--gray-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-    .conv-meta { text-align: right; font-size: 0.7rem; color: var(--gray-muted); }
-    .unread-badge { background: var(--green); color: white; font-size: 0.65rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
-
-    /* Chat View */
-    .chat-view { display: flex; flex-direction: column; height: calc(100vh - 140px); background: white; }
-    .chat-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-border); display: flex; align-items: center; gap: 12px; background: white; }
-    .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--gray-bg); }
-    .msg-bubble { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 0.9rem; position: relative; }
-    .msg-bubble.buyer { align-self: flex-end; background: var(--green); color: white; border-bottom-right-radius: 4px; }
-    .msg-bubble.seller { align-self: flex-start; background: white; border: 1px solid var(--gray-border); border-bottom-left-radius: 4px; }
-    .msg-time { font-size: 0.65rem; opacity: 0.7; margin-top: 4px; text-align: right; }
-    .chat-input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--gray-border); background: white; }
-    .chat-input input { flex: 1; padding: 12px 16px; border: 1px solid var(--gray-border); border-radius: 30px; font-family: var(--font); outline: none; }
-    .chat-input button { background: var(--green); color: white; border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-
-    /* ============================================================
-       ACCOUNT
-       ============================================================ */
-    .account-header { padding: 24px 16px 16px; background: white; display: flex; align-items: center; gap: 16px; }
-    .avatar-large { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--green-light); }
-    .account-menu { padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 4px; }
-    .menu-item {
-      display: flex; align-items: center; gap: 14px; padding: 14px 12px;
-      background: white; border-radius: var(--radius-sm); cursor: pointer;
-      font-size: 0.95rem; border: none; width: 100%; text-align: left; font-family: var(--font); color: var(--gray-text);
-    }
-    .menu-item i { width: 24px; color: var(--gray-muted); }
-    .menu-item.logout { color: #dc2626; }
-
-    /* ============================================================
-       PROPERTY DETAIL
-       ============================================================ */
-    #detailScreen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; max-width: 480px; margin: 0 auto; background: white; z-index: 200; overflow-y: auto; display: none; }
-    #detailScreen.active { display: block; }
-    .detail-image { width: 100%; height: 260px; object-fit: cover; }
-    .detail-body { padding: 16px; }
-    .detail-price { font-size: 1.6rem; font-weight: 800; color: var(--green-dark); }
-    .detail-actions { display: flex; gap: 12px; margin: 16px 0; }
-
-    /* ============================================================
-       UTILITY / TOAST
-       ============================================================ */
-    .toast {
-      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-      background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px;
-      font-size: 0.85rem; z-index: 999; opacity: 0; transition: 0.3s; pointer-events: none;
-    }
-    .toast.show { opacity: 1; }
-
-    /* ============================================================
-       ADD PROPERTY OVERLAY
-       ============================================================ */
-    #addPropertyScreen {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0; max-width: 480px;
-      margin: 0 auto; background: white; z-index: 200; overflow-y: auto; display: none;
-    }
-
-    /* ============================================================
-       RESPONSIVE
-       ============================================================ */
-    @media (min-width: 768px) {
-      .app-container { max-width: 480px; border-radius: 24px; margin: 20px auto; min-height: calc(100vh - 40px); box-shadow: 0 24px 60px rgba(0,0,0,0.08); }
-      .bottom-nav { max-width: 480px; border-radius: 0 0 24px 24px; }
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -338,7 +17,6 @@
     <div class="logo-large">LANDIER</div>
     <div class="tagline">Find Land. Make It Yours.</div>
 
-    <!-- Login -->
     <div id="loginForm" class="auth-form">
       <div class="input-group">
         <label>Email</label>
@@ -357,7 +35,6 @@
       <div class="auth-switch"><a onclick="showForgot()">Forgot password?</a></div>
     </div>
 
-    <!-- Register -->
     <div id="registerForm" class="auth-form hidden">
       <h3 style="margin-bottom:8px;">Create Account</h3>
       <div class="input-group"><label>Full Name</label><div class="input-wrapper"><i class="lucide icon-lucide-user"></i><input type="text" id="regName" placeholder="Jane Wanjiku"></div></div>
@@ -370,7 +47,6 @@
       <div class="auth-switch">Already have an account? <a onclick="showLogin()">Sign In</a></div>
     </div>
 
-    <!-- Forgot Password -->
     <div id="forgotForm" class="auth-form hidden">
       <h3 style="margin-bottom:8px;">Reset Password</h3>
       <div class="input-group"><label>Email</label><div class="input-wrapper"><i class="lucide icon-lucide-mail"></i><input type="email" id="resetEmail" placeholder="jane@example.com"></div></div>
@@ -398,7 +74,6 @@
         <div class="search-inner">
           <i class="lucide icon-lucide-search"></i>
           <input type="text" id="searchInput" placeholder="Search land by location, title..." oninput="filterProperties()">
-          <button class="filter-btn" onclick="showToast('Use categories and sorting below.')"><i class="lucide icon-lucide-sliders"></i></button>
         </div>
       </div>
       <div class="categories" id="categoryFilters">
@@ -410,21 +85,15 @@
       </div>
       <div class="section-title">
         <h3>Featured Properties</h3>
-        <span onclick="toggleSort()">Sort <i class="lucide icon-lucide-chevron-down"></i></span>
       </div>
       <div id="propertyGrid" class="property-grid"><p style="grid-column:span 2; text-align:center; color:var(--gray-muted); padding:40px 0;">Loading listings...</p></div>
     </div>
 
-    <!-- EXPLORE -->
+    <!-- EXPLORE (Now uses the map from maps.js) -->
     <div id="exploreScreen" class="screen">
-      <div class="map-container">
-        <h3 style="margin-bottom:12px;">Explore Land on Map</h3>
-        <div class="map-placeholder">
-          <i class="lucide icon-lucide-map"></i>
-          <p><strong>Google Maps Integration</strong></p>
-          <p style="font-size:0.8rem; max-width:300px;">To enable the interactive map, add your Google Maps API key in the <code>&lt;script&gt;</code> tag.</p>
-          <div id="exploreGrid" class="property-grid" style="margin-top:20px; width:100%;"></div>
-        </div>
+      <div style="padding: 16px 16px 0;">
+        <h3 style="margin-bottom: 12px;">Explore Land on Map</h3>
+        <div id="mapContainer" style="height: 60vh; width: 100%; border-radius: 12px; background: #eef1f5;"></div>
       </div>
     </div>
 
@@ -525,13 +194,42 @@
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast" class="toast"></div>
 
-<script>
-  // Wait for Firebase to load from the module script above
+<script type="module">
+  // Import Firebase and Maps
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { initExploreMap } from './maps.js'; // Import the map logic
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyACuvTi-yMGkQ4nojapLYeJ8tOZlty2fpI",
+    authDomain: "gumado.firebaseapp.com",
+    projectId: "gumado",
+    storageBucket: "gumado.firebasestorage.app",
+    messagingSenderId: "220205636823",
+    appId: "1:220205636823:web:e194c0bdf9f0e94dfe6492",
+    measurementId: "G-P9B3XKTYDS"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  window.firebaseAuth = auth;
+  window.firebaseDb = db;
+  window.firebaseFuncs = {
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged,
+    collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, serverTimestamp
+  };
+
+  let currentUser = null;
+  let properties = [];
+  let currentCategory = 'All';
+  let searchQuery = '';
+
   window.addEventListener('DOMContentLoaded', () => {
-    // Check if Firebase is ready
     const checkFirebase = setInterval(() => {
       if (window.firebaseAuth && window.firebaseDb) {
         clearInterval(checkFirebase);
@@ -540,18 +238,7 @@
     }, 100);
   });
 
-  let currentUser = null;
-  let properties = [];
-  let savedProperties = [];
-  let currentCategory = 'All';
-  let searchQuery = '';
-  let currentSort = 'default';
-  let activeChatId = null;
-
   function initApp() {
-    const auth = window.firebaseAuth;
-    const { onAuthStateChanged } = window.firebaseFuncs;
-
     onAuthStateChanged(auth, async (user) => {
       currentUser = user;
       if (user) {
@@ -567,13 +254,11 @@
       }
     });
 
-    // Auth Form Switchers
     document.getElementById('loginBtn').addEventListener('click', async () => {
       const email = document.getElementById('loginEmail').value;
       const pass = document.getElementById('loginPassword').value;
-      try {
-        await window.firebaseFuncs.signInWithEmailAndPassword(auth, email, pass);
-      } catch (err) { alert('Login failed: ' + err.message); }
+      try { await signInWithEmailAndPassword(auth, email, pass); } 
+      catch (err) { alert('Login failed: ' + err.message); }
     });
 
     document.getElementById('registerBtn').addEventListener('click', async () => {
@@ -585,13 +270,9 @@
       
       if (pass !== confirm) return alert('Passwords do not match');
       try {
-        const cred = await window.firebaseFuncs.createUserWithEmailAndPassword(auth, email, pass);
-        await window.firebaseFuncs.setDoc(window.firebaseFuncs.doc(window.firebaseDb, 'users', cred.user.uid), {
-          fullName: name,
-          email: email,
-          phone: phone,
-          sellerEnabled: false,
-          createdAt: window.firebaseFuncs.serverTimestamp()
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          fullName: name, email: email, phone: phone, sellerEnabled: false, createdAt: serverTimestamp()
         });
         alert('Registration successful!');
       } catch (err) { alert('Registration failed: ' + err.message); }
@@ -599,13 +280,10 @@
 
     document.getElementById('resetBtn').addEventListener('click', async () => {
       const email = document.getElementById('resetEmail').value;
-      try {
-        await window.firebaseFuncs.sendPasswordResetEmail(auth, email);
-        alert('Reset link sent!');
-      } catch (err) { alert(err.message); }
+      try { await sendPasswordResetEmail(auth, email); alert('Reset link sent!'); } 
+      catch (err) { alert(err.message); }
     });
 
-    // Add Property Upload Logic
     document.getElementById('addImageFile').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -631,9 +309,6 @@
 
     document.getElementById('publishBtn').addEventListener('click', async () => {
       if (!window.tempBase64Image) return alert('Please upload an image.');
-      const db = window.firebaseDb;
-      const { collection, addDoc, serverTimestamp } = window.firebaseFuncs;
-      
       try {
         await addDoc(collection(db, 'landListings'), {
           sellerId: auth.currentUser.uid,
@@ -644,7 +319,7 @@
           size: document.getElementById('addSize').value,
           description: document.getElementById('addDescription').value,
           imageUrls: [window.tempBase64Image],
-          moderationStatus: 'Approved', // Auto-approve for demo
+          moderationStatus: 'Approved',
           createdAt: serverTimestamp()
         });
         alert('Land published successfully!');
@@ -655,11 +330,8 @@
   }
 
   async function loadListings() {
-    const db = window.firebaseDb;
-    const { collection, query, where, getDocs } = window.firebaseFuncs;
     const grid = document.getElementById('propertyGrid');
     grid.innerHTML = '<p style="grid-column:span 2; text-align:center; color:var(--gray-muted); padding:40px 0;">Loading...</p>';
-
     try {
       const q = query(collection(db, 'landListings'), where('moderationStatus', '==', 'Approved'));
       const snap = await getDocs(q);
@@ -667,7 +339,6 @@
       renderGrid();
     } catch (err) {
       grid.innerHTML = '<p style="grid-column:span 2; text-align:center; color:red; padding:40px 0;">Error loading listings.</p>';
-      console.error(err);
     }
   }
 
@@ -677,9 +348,6 @@
       const matchSearch = searchQuery === '' || p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.location.toLowerCase().includes(searchQuery.toLowerCase());
       return matchCat && matchSearch;
     });
-
-    if (currentSort === 'price-asc') filtered.sort((a, b) => a.price - b.price);
-    if (currentSort === 'price-desc') filtered.sort((a, b) => b.price - a.price);
 
     const grid = document.getElementById('propertyGrid');
     if (filtered.length === 0) {
@@ -691,7 +359,6 @@
       <div class="property-card" onclick="openPropertyDetail('${p.id}')">
         <div class="card-image">
           <img src="${p.imageUrls[0]}" alt="${p.title}" loading="lazy">
-          ${p.featured ? '<span class="badge-featured">Featured</span>' : ''}
         </div>
         <div class="card-content">
           <div class="card-title">${p.title}</div>
@@ -710,24 +377,28 @@
     document.getElementById('accountEmail').textContent = currentUser.email;
   }
 
-  // UI Helpers (Globals)
+  // UI Helpers
   window.showRegister = () => { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('registerForm').classList.remove('hidden'); };
   window.showLogin = () => { document.getElementById('registerForm').classList.add('hidden'); document.getElementById('forgotForm').classList.add('hidden'); document.getElementById('loginForm').classList.remove('hidden'); };
   window.showForgot = () => { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('forgotForm').classList.remove('hidden'); };
   window.togglePassword = (id) => { const el = document.getElementById(id); el.type = el.type === 'password' ? 'text' : 'password'; };
-  window.logout = () => window.firebaseFuncs.signOut(window.firebaseAuth);
+  window.logout = () => signOut(auth);
   
   window.switchTab = (tab) => {
     document.querySelectorAll('#mainApp > .screen').forEach(s => s.classList.remove('active'));
     document.getElementById(tab + 'Screen').classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.querySelector(`.nav-item[data-nav="${tab}"]`).classList.add('active');
+    
+    // Initialize Map if Explore tab is selected
+    if (tab === 'explore') {
+      initExploreMap();
+    }
     if (tab === 'home') renderGrid();
   };
 
   window.setCategory = (cat, el) => { currentCategory = cat; document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); renderGrid(); };
   window.filterProperties = () => { searchQuery = document.getElementById('searchInput').value; renderGrid(); };
-  window.toggleSort = () => { currentSort = currentSort === 'default' ? 'price-asc' : currentSort === 'price-asc' ? 'price-desc' : 'default'; renderGrid(); };
   window.showToast = (msg) => { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); };
 
   window.openAddProperty = () => { document.getElementById('addPropertyScreen').style.display = 'block'; };
@@ -744,9 +415,6 @@
         <div class="price" style="font-size:1.5rem;">KSh ${p.price.toLocaleString()}</div>
         <p style="color:var(--gray-muted); margin-top:8px;"><i class="lucide icon-lucide-map-pin"></i> ${p.location}</p>
         <p style="margin-top:16px; line-height:1.6;">${p.description}</p>
-        <div style="margin-top:24px; display:flex; gap:12px;">
-           <button class="btn-primary" style="flex:1;" onclick="showToast('Chat feature requires more DB setup.')">Chat with Owner</button>
-        </div>
       </div>
     `;
     document.getElementById('detailScreen').classList.add('active');
