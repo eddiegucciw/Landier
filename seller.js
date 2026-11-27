@@ -1,8 +1,33 @@
-// seller.js - Seller functionality
-import { db, auth, collection, addDoc, doc, setDoc, serverTimestamp, uploadFile, getDocs, query, where } from './firebase.js';
+// seller.js
+import { db, auth, collection, addDoc, doc, setDoc, serverTimestamp, getDocs, query, where } from './firebase.js';
 
 let currentStep = 1;
 let locMapInstance = null;
+
+// Helper function to resize and convert image to Base64
+function processImageToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800; // Resize to keep Base64 string small
+        const scale = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Compress as JPEG to save space
+        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+}
 
 document.getElementById('activateSellerBtn')?.addEventListener('click', async () => {
   const user = auth.currentUser;
@@ -112,19 +137,20 @@ document.getElementById('publishLandBtn')?.addEventListener('click', async () =>
   if (!loc) return alert('Location required.');
 
   const btn = document.getElementById('publishLandBtn');
-  btn.textContent = 'Publishing...';
+  btn.textContent = 'Processing Images & Publishing...';
   btn.disabled = true;
 
   try {
     const files = document.getElementById('landImages').files;
-    const imageUrls = [];
+    const base64Images = [];
     
+    // Convert images to Base64 instead of uploading to Storage
     for (const file of files) {
-      const path = `listings/${user.uid}/${Date.now()}_${file.name}`;
-      const url = await uploadFile(path, file);
-      imageUrls.push(url);
+      const base64Str = await processImageToBase64(file);
+      base64Images.push(base64Str);
     }
 
+    // Save to Firestore with Base64 images inside the array
     await addDoc(collection(db, 'landListings'), {
       sellerId: user.uid,
       title: document.getElementById('landTitle').value,
@@ -136,7 +162,7 @@ document.getElementById('publishLandBtn')?.addEventListener('click', async () =>
       description: document.getElementById('landDescription').value,
       latitude: loc.lat,
       longitude: loc.lng,
-      imageUrls: imageUrls,
+      imageUrls: base64Images, // Array of Base64 strings
       moderationStatus: 'Pending Approval',
       listingStatus: 'Pending Approval',
       createdAt: serverTimestamp()
@@ -146,12 +172,13 @@ document.getElementById('publishLandBtn')?.addEventListener('click', async () =>
     document.getElementById('addLandModal').classList.add('hidden');
     document.getElementById('sellerModal').classList.add('hidden');
     
+    // Reset form
     document.getElementById('landTitle').value = '';
     document.getElementById('landPrice').value = '';
     document.getElementById('imagePreview').innerHTML = '';
     document.getElementById('selectedCoords').textContent = 'None';
   } catch (err) {
-    alert('Upload failed: ' + err.message);
+    alert('Publishing failed: ' + err.message);
   } finally {
     btn.textContent = 'Publish Land';
     btn.disabled = false;
