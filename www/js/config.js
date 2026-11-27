@@ -11,10 +11,6 @@ export const firebaseConfig = {
   measurementId: "G-P9B3XKTYDS"
 };
 
-// Replaced at build time by the GitHub Actions workflow from the MAPS_API_KEY secret.
-// For local testing you can paste a key here (don't commit it).
-export const MAPS_API_KEY = "__MAPS_API_KEY__";
-
 export const APP_VERSION = "1.0.0";
 export const SUPPORT_EMAIL = "support@landier.co.ke";
 

@@ -1,7 +1,7 @@
 # LANDIER — Kenyan Land Marketplace
 
 Buy and sell land across Kenya. Android app built with [Capacitor](https://capacitorjs.com) around a
-plain HTML/JS front end, with Firebase (Auth + Firestore) and Google Maps.
+plain HTML/JS front end, with Firebase (Auth + Firestore) and Leaflet + OpenStreetMap maps (no API key needed).
 
 **Features:** email sign-up with verification · browse/search/filter land · listing detail with photo
 gallery, mini map and directions · save listings · real-time buyer–seller chat (plus call / WhatsApp) ·
@@ -45,19 +45,16 @@ Push a tag like `v1.0.0` to also publish the files as a GitHub Release.
 Photos are stored inside Firestore (compressed, one document per photo), so Firebase Storage and the
 Blaze plan are **not** required.
 
-### 2. Google Maps
-1. In [Google Cloud Console](https://console.cloud.google.com/google/maps-apis) (project `gumado`),
-   enable **Maps JavaScript API** and **Geocoding API** (billing account required; the free monthly
-   credit covers small apps).
-2. Create an API key. Under *Application restrictions → Websites* add `https://localhost/*`
-   (that's the app's origin inside Android), and under *API restrictions* allow only the two APIs above.
-3. Add it to the repo as the `MAPS_API_KEY` secret.
+### 2. Maps
+Nothing to set up. Maps use [Leaflet](https://leafletjs.com) (bundled into the app from npm) with free
+OpenStreetMap street tiles, Esri satellite imagery and OpenStreetMap's Nominatim for place search.
+None of these need an API key. If the app grows large (thousands of daily users), switch the tile URLs in
+`www/js/map.js` to a paid tile provider to stay within OpenStreetMap's fair-use policy.
 
 ### 3. GitHub secrets (Settings → Secrets and variables → Actions)
 
 | Secret | Required | Purpose |
 | --- | --- | --- |
-| `MAPS_API_KEY` | for maps | Google Maps key from step 2 |
 | `ANDROID_KEYSTORE_BASE64` | for release builds | `base64 -w0 landier.jks` |
 | `ANDROID_KEYSTORE_PASSWORD` | for release builds | keystore password |
 | `ANDROID_KEY_ALIAS` | for release builds | e.g. `landier` |
@@ -79,9 +76,6 @@ npm run serve                 # web version at http://localhost:5173
 npx cap add android && node scripts/configure-android.mjs
 npx cap sync android && npx cap open android   # run from Android Studio
 ```
-
-For the map on localhost, temporarily put a key in `www/js/config.js` (don't commit it) and allow
-`http://localhost:5173/*` on the key.
 
 ## Project layout
 
