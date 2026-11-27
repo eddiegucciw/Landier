@@ -1,0 +1,27 @@
+/* Landier — Leaflet / OpenStreetMap map styles (loaded after styles.css) */
+
+/* Overlay controls on the explore map */
+.map-top, .fab-loc, .map-count, .map-preview { z-index: 1000; }
+.fab-loc { right: 10px; bottom: 90px; transition: bottom .2s ease; }
+.map-count { left: 50%; transform: translateX(-50%); bottom: 18px; }
+.map-preview { bottom: 14px; }
+/* Keep "my location" above the listing preview card */
+.map-wrap:has(.map-preview:not([hidden])) .fab-loc { bottom: 136px; }
+
+/* Price pins */
+.price-pin { position: absolute; transform: translate(-50%, calc(-100% - 6px)); background: var(--brand); color: #fff; font: 700 12px/1 var(--font); padding: 6px 9px; border-radius: 999px; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); white-space: nowrap; cursor: pointer; }
+.price-pin::after { content: ""; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--brand); border-bottom: 0; }
+.price-pin.active { background: var(--brand-dark); transform: translate(-50%, calc(-100% - 6px)) scale(1.12); }
+.price-pin.active::after { border-top-color: var(--brand-dark); }
+
+/* Location pin (picker + detail map) */
+.drop-pin { position: relative; width: 30px; height: 30px; background: var(--danger); border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,.35); margin-top: 2px; }
+.drop-pin::after { content: ""; position: absolute; inset: 7px; background: #fff; border-radius: 50%; }
+
+/* Leaflet look & feel */
+.leaflet-container { font-family: var(--font); background: var(--surface-2); }
+.leaflet-control-layers, .leaflet-bar a { border-radius: 10px !important; }
+.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background: rgba(16,185,129,.25) !important; }
+.marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background: var(--brand) !important; color: #fff; font-weight: 700; font-family: var(--font); }
+[data-theme="dark"] .leaflet-control-layers, [data-theme="dark"] .leaflet-bar a, [data-theme="dark"] .leaflet-control-attribution { background: var(--surface); color: var(--text); }
+[data-theme="dark"] .leaflet-control-attribution a { color: var(--brand); }
