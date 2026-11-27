@@ -1,220 +1,191 @@
-// app.js - Main application logic & Buyer features
-import { auth, db, loginUser, registerUser, logoutUser, resetPassword, onAuthStateChanged, collection, query, where, getDocs, doc, setDoc, serverTimestamp } from './firebase.js';
+// app.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-const authScreen = document.getElementById('authScreen');
-const mainApp = document.getElementById('mainApp');
-const screens = document.querySelectorAll('.screen');
-const navItems = document.querySelectorAll('.nav-item');
+// Your Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyACuvTi-yMGkQ4nojapLYeJ8tOZlty2fpI",
+  authDomain: "gumado.firebaseapp.com",
+  projectId: "gumado",
+  storageBucket: "gumado.firebasestorage.app",
+  messagingSenderId: "220205636823",
+  appId: "1:220205636823:web:e194c0bdf9f0e94dfe6492",
+  measurementId: "G-P9B3XKTYDS"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 let currentUser = null;
-let allListings = [];
+let properties = [];
 let currentCategory = 'All';
+let currentSearch = '';
 
-// ================= AUTHENTICATION =================
-onAuthStateChanged(auth, async (user) => {
-  currentUser = user;
-  if (user) {
-    authScreen.classList.add('hidden');
-    mainApp.classList.remove('hidden');
-    await loadListings();
-    await loadUserProfile();
-  } else {
-    authScreen.classList.remove('hidden');
-    mainApp.classList.add('hidden');
-    allListings = [];
-  }
-});
+// ---- INIT APP ----
+document.addEventListener('DOMContentLoaded', () => {
+  // Auth State Listener
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    if (user) {
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('bottomNav').style.display = 'flex';
+      await loadListings();
+      updateAccountUI();
+    } else {
+      document.getElementById('authScreen').style.display = 'block';
+      document.getElementById('mainApp').style.display = 'none';
+      document.getElementById('bottomNav').style.display = 'none';
+    }
+  });
 
-document.getElementById('showRegister').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('loginForm').classList.add('hidden');
-  document.getElementById('registerForm').classList.remove('hidden');
-});
-document.getElementById('showLogin').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('registerForm').classList.add('hidden');
-  document.getElementById('loginForm').classList.remove('hidden');
-});
-document.getElementById('showForgot').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('loginForm').classList.add('hidden');
-  document.getElementById('forgotForm').classList.remove('hidden');
-});
-document.getElementById('backToLogin').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('forgotForm').classList.add('hidden');
-  document.getElementById('loginForm').classList.remove('hidden');
-});
+  // Auth Buttons
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value;
+    const pass = document.getElementById('loginPassword').value;
+    try { await signInWithEmailAndPassword(auth, email, pass); } 
+    catch (err) { alert('Login failed: ' + err.message); }
+  });
 
-document.getElementById('loginBtn').addEventListener('click', async () => {
-  const email = document.getElementById('loginEmail').value;
-  const pass = document.getElementById('loginPassword').value;
-  if (!email || !pass) return alert('Please enter email and password');
-  try {
-    await loginUser(email, pass);
-  } catch (err) {
-    alert('Login failed: ' + err.message);
-  }
-});
-
-document.getElementById('registerBtn').addEventListener('click', async () => {
-  const name = document.getElementById('regName').value;
-  const email = document.getElementById('regEmail').value;
-  const phone = document.getElementById('regPhone').value;
-  const pass = document.getElementById('regPassword').value;
-  const confirm = document.getElementById('regConfirm').value;
-  
-  if (!name || !email || !phone || !pass) return alert('Please fill all fields');
-  if (pass !== confirm) return alert('Passwords do not match');
-  
-  try {
-    const cred = await registerUser(email, pass);
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      fullName: name,
-      email: email,
-      phone: phone,
-      sellerEnabled: false,
-      createdAt: serverTimestamp()
-    });
-    alert('Registration successful!');
-  } catch (err) {
-    alert('Registration failed: ' + err.message);
-  }
-});
-
-document.getElementById('resetBtn').addEventListener('click', async () => {
-  const email = document.getElementById('resetEmail').value;
-  if (!email) return alert('Please enter email');
-  try {
-    await resetPassword(email);
-    alert('Password reset link sent to your email.');
-  } catch (err) {
-    alert('Error: ' + err.message);
-  }
-});
-
-document.getElementById('logoutBtn').addEventListener('click', () => logoutUser());
-
-// ================= NAVIGATION =================
-navItems.forEach(item => {
-  item.addEventListener('click', () => {
-    const tab = item.dataset.tab;
-    navItems.forEach(n => n.classList.remove('active'));
-    item.classList.add('active');
-    screens.forEach(s => s.classList.remove('active'));
-    document.getElementById(tab + 'Screen').classList.add('active');
+  document.getElementById('registerBtn').addEventListener('click', async () => {
+    const name = document.getElementById('regName').value;
+    const email = document.getElementById('regEmail').value;
+    const phone = document.getElementById('regPhone').value;
+    const pass = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regConfirmPassword').value;
     
-    if (tab === 'explore' && window.initMap) window.initMap();
-    if (tab === 'saved') loadSavedListings();
+    if (pass !== confirm) return alert('Passwords do not match');
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        fullName: name, email: email, phone: phone, sellerEnabled: false, createdAt: serverTimestamp()
+      });
+      alert('Registration successful!');
+    } catch (err) { alert('Registration failed: ' + err.message); }
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', async () => {
+    const email = document.getElementById('resetEmail').value;
+    try { await sendPasswordResetEmail(auth, email); alert('Reset link sent!'); } 
+    catch (err) { alert(err.message); }
+  });
+
+  // Image Processing (Base64)
+  document.getElementById('addImageFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const scale = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const base64Str = canvas.toDataURL('image/jpeg', 0.7);
+        document.getElementById('imagePreview').innerHTML = `<img src="${base64Str}" style="width:100px; border-radius:8px;">`;
+        window.tempBase64Image = base64Str;
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Publish Land
+  document.getElementById('publishBtn').addEventListener('click', async () => {
+    if (!window.tempBase64Image) return alert('Please upload an image.');
+    try {
+      await addDoc(collection(db, 'landListings'), {
+        sellerId: auth.currentUser.uid,
+        title: document.getElementById('addTitle').value,
+        price: Number(document.getElementById('addPrice').value),
+        location: document.getElementById('addLocation').value,
+        landUse: document.getElementById('addCategory').value,
+        size: document.getElementById('addSize').value,
+        description: document.getElementById('addDescription').value,
+        imageUrls: [window.tempBase64Image],
+        moderationStatus: 'Approved',
+        createdAt: serverTimestamp()
+      });
+      alert('Land published successfully!');
+      window.closeAddProperty();
+      loadListings();
+    } catch (err) { alert('Error: ' + err.message); }
   });
 });
 
-// ================= BUYER FEATURES =================
+// ---- DATA FETCHING & RENDERING ----
 async function loadListings() {
-  const grid1 = document.getElementById('featuredGrid');
-  const grid2 = document.getElementById('recentGrid');
-  grid1.innerHTML = '<p class="empty-state">Loading...</p>';
-  grid2.innerHTML = '<p class="empty-state">Loading...</p>';
-
+  const grid = document.getElementById('propertyGrid');
+  grid.innerHTML = '<p style="grid-column:span 2; text-align:center; color:var(--gray-muted); padding:40px 0;">Loading...</p>';
   try {
     const q = query(collection(db, 'landListings'), where('moderationStatus', '==', 'Approved'));
-    const snapshot = await getDocs(q);
-    allListings = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderListings(allListings);
+    const snap = await getDocs(q);
+    properties = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderGrid();
   } catch (err) {
-    console.error(err);
-    grid1.innerHTML = '<p class="empty-state">Error loading listings. Check Firestore rules.</p>';
-    grid2.innerHTML = '';
+    grid.innerHTML = '<p style="grid-column:span 2; text-align:center; color:red; padding:40px 0;">Error loading listings.</p>';
   }
 }
 
-function renderListings(listings) {
-  const featured = listings.filter(l => l.featured).slice(0, 4);
-  const recent = listings.slice(0, 6);
-  
-  document.getElementById('featuredGrid').innerHTML = featured.length 
-    ? featured.map(createCard).join('') 
-    : '<p class="empty-state">No featured land available.</p>';
-    
-  document.getElementById('recentGrid').innerHTML = recent.length 
-    ? recent.map(createCard).join('') 
-    : '<p class="empty-state">No recent land available.</p>';
-}
+function renderGrid() {
+  let filtered = properties.filter(p => {
+    const matchCat = currentCategory === 'All' || p.landUse === currentCategory;
+    const matchSearch = currentSearch === '' || p.title.toLowerCase().includes(currentSearch.toLowerCase()) || p.location.toLowerCase().includes(currentSearch.toLowerCase());
+    return matchCat && matchSearch;
+  });
 
-function createCard(land) {
-  const img = land.imageUrls && land.imageUrls[0] ? land.imageUrls[0] : 'https://via.placeholder.com/300?text=No+Image';
-  return `
-    <div class="property-card">
-      <img src="${img}" alt="${land.title}" loading="lazy">
-      <div class="info">
-        <h3>${land.title}</h3>
-        <div class="price">KSh ${land.price?.toLocaleString()}</div>
-        <div class="location">${land.county || 'Kenya'}, ${land.town || ''}</div>
-        <div class="meta">${land.size || 'N/A'}</div>
+  const grid = document.getElementById('propertyGrid');
+  if (filtered.length === 0) {
+    grid.innerHTML = '<p style="grid-column:span 2; text-align:center; color:var(--gray-muted); padding:40px 0;">No land found.</p>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => `
+    <div class="property-card" onclick="openPropertyDetail('${p.id}')">
+      <div class="card-image">
+        <img src="${p.imageUrls[0]}" alt="${p.title}" loading="lazy">
+      </div>
+      <div class="card-content">
+        <div class="card-title">${p.title}</div>
+        <div class="card-price">KSh ${p.price.toLocaleString()}</div>
+        <div class="card-location"><i class="lucide icon-lucide-map-pin"></i> ${p.location}</div>
+        <div class="card-specs">${p.size}</div>
+        <span class="availability">Available</span>
       </div>
     </div>
+  `).join('');
+}
+
+function updateAccountUI() {
+  if (!currentUser) return;
+  document.getElementById('accountName').textContent = currentUser.email.split('@')[0];
+  document.getElementById('accountEmail').textContent = currentUser.email;
+}
+
+// ---- GLOBAL FUNCTIONS (Called from index.html) ----
+window.filterByCategory = (cat) => { currentCategory = cat; renderGrid(); };
+window.filterBySearch = (q) => { currentSearch = q; renderGrid(); };
+
+window.showPropertyDetail = (id) => {
+  const p = properties.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('detailTitle').textContent = p.title;
+  document.getElementById('detailContent').innerHTML = `
+    <img src="${p.imageUrls[0]}" style="width:100%; height:260px; object-fit:cover;">
+    <div style="padding:16px;">
+      <h2 style="font-size:1.2rem;">${p.title}</h2>
+      <div class="price" style="font-size:1.5rem;">KSh ${p.price.toLocaleString()}</div>
+      <p style="color:var(--gray-muted); margin-top:8px;"><i class="lucide icon-lucide-map-pin"></i> ${p.location}</p>
+      <p style="margin-top:16px; line-height:1.6;">${p.description}</p>
+    </div>
   `;
-}
+  document.getElementById('detailScreen').classList.add('active');
+};
 
-document.getElementById('searchBtn').addEventListener('click', () => {
-  const q = document.getElementById('searchInput').value.toLowerCase();
-  const filtered = allListings.filter(l =>
-    (l.title && l.title.toLowerCase().includes(q)) || 
-    (l.county && l.county.toLowerCase().includes(q)) ||
-    (l.town && l.town.toLowerCase().includes(q))
-  );
-  renderListings(filtered);
-});
-
-document.querySelectorAll('.category-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentCategory = btn.dataset.cat;
-    const filtered = currentCategory === 'All'
-      ? allListings
-      : allListings.filter(l => l.landUse === currentCategory);
-    renderListings(filtered);
-  });
-});
-
-async function loadSavedListings() {
-  if (!currentUser) return;
-  const grid = document.getElementById('savedGrid');
-  grid.innerHTML = '<p class="empty-state">Loading...</p>';
-  
-  try {
-    const q = query(collection(db, 'savedListings'), where('userId', '==', currentUser.uid));
-    const snap = await getDocs(q);
-    const savedIds = snap.docs.map(d => d.data().listingId);
-    
-    const saved = allListings.filter(l => savedIds.includes(l.id));
-    grid.innerHTML = saved.length 
-      ? saved.map(createCard).join('') 
-      : '<p class="empty-state">No saved land yet.</p>';
-  } catch (err) {
-    grid.innerHTML = '<p class="empty-state">Error loading saved land.</p>';
-  }
-}
-
-async function loadUserProfile() {
-  if (!currentUser) return;
-  try {
-    const snap = await getDocs(query(collection(db, 'users'), where('email', '==', currentUser.email)));
-    if (!snap.empty) {
-      const data = snap.docs[0].data();
-      document.getElementById('profileInfo').innerHTML = `
-        <p><strong>Name:</strong> ${data.fullName}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Phone:</strong> ${data.phone || 'N/A'}</p>
-        <p><strong>Role:</strong> ${data.sellerEnabled ? 'Buyer & Seller' : 'Buyer'}</p>
-      `;
-      if (data.sellerEnabled) {
-        document.getElementById('sellerDashboardBtn').classList.remove('hidden');
-        document.getElementById('activateSellerBtn').classList.add('hidden');
-      }
-    }
-  } catch (err) {
-    document.getElementById('profileInfo').innerHTML = 'Error loading profile.';
-  }
-}
+window.logout = () => signOut(auth);
