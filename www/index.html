@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#047857">
+  <meta name="description" content="Landier — buy and sell verified land across Kenya.">
+  <title>Landier · Find Land. Make It Yours.</title>
+  <link rel="icon" href="icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/lucide/lucide.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/lucide-static@0.453.0/font/lucide.css'">
+  <link rel="stylesheet" href="css/styles.css">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('landier-theme')||'light'}catch(e){}</script>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ============ SPLASH ============ -->
+  <section id="splash" class="splash">
+    <div class="logo-icon big"><i class="icon-map"></i></div>
+    <h1>LANDIER</h1>
+    <span class="spinner dark"></span>
+  </section>
+
+  <!-- ============ AUTH ============ -->
+  <section id="authScreen" class="auth" hidden>
+    <div class="auth-shapes"><span></span><span></span></div>
+    <div class="auth-inner">
+      <div class="brand">
+        <div class="logo-icon"><i class="icon-map"></i></div>
+        <h1>LANDIER</h1>
+        <p>Find Land. Make It Yours.</p>
+      </div>
+
+      <form id="loginForm" class="auth-card" data-view="login" novalidate>
+        <h2>Welcome back</h2>
+        <label class="field"><i class="icon-mail"></i><input type="email" name="email" placeholder="Email address" autocomplete="email" required></label>
+        <label class="field"><i class="icon-lock"></i><input type="password" name="password" placeholder="Password" autocomplete="current-password" required>
+          <button type="button" class="pwd-toggle" data-action="togglePwd" aria-label="Show password"><i class="icon-eye"></i></button></label>
+        <button class="btn btn-primary btn-block" type="submit">Sign in <i class="icon-arrow-right"></i></button>
+        <div class="auth-links">
+          <span>New here? <a href="#" data-action="authView" data-view="register">Create account</a></span>
+          <a href="#" data-action="authView" data-view="forgot">Forgot password?</a>
+        </div>
+      </form>
+
+      <form id="registerForm" class="auth-card" data-view="register" hidden novalidate>
+        <h2>Create account</h2>
+        <label class="field"><i class="icon-user"></i><input type="text" name="name" placeholder="Full name" autocomplete="name" required></label>
+        <label class="field"><i class="icon-phone"></i><input type="tel" name="phone" placeholder="Phone (e.g. 0712 345 678)" autocomplete="tel" required></label>
+        <label class="field"><i class="icon-mail"></i><input type="email" name="email" placeholder="Email address" autocomplete="email" required></label>
+        <label class="field"><i class="icon-lock"></i><input type="password" name="password" placeholder="Password (min. 8 characters)" autocomplete="new-password" required>
+          <button type="button" class="pwd-toggle" data-action="togglePwd" aria-label="Show password"><i class="icon-eye"></i></button></label>
+        <label class="field"><i class="icon-lock"></i><input type="password" name="confirm" placeholder="Confirm password" autocomplete="new-password" required></label>
+        <label class="check"><input type="checkbox" name="terms" required> <span>I agree to the <a href="#" data-action="openLegal">Terms &amp; Privacy Policy</a></span></label>
+        <button class="btn btn-primary btn-block" type="submit">Create account <i class="icon-user-plus"></i></button>
+        <div class="auth-links">
+          <span>Already have an account? <a href="#" data-action="authView" data-view="login">Sign in</a></span>
+        </div>
+      </form>
+
+      <form id="forgotForm" class="auth-card" data-view="forgot" hidden novalidate>
+        <h2>Reset password</h2>
+        <p class="muted">Enter your email and we'll send you a reset link.</p>
+        <label class="field"><i class="icon-mail"></i><input type="email" name="email" placeholder="Email address" autocomplete="email" required></label>
+        <button class="btn btn-primary btn-block" type="submit">Send reset link <i class="icon-send"></i></button>
+        <div class="auth-links"><a href="#" data-action="authView" data-view="login"><i class="icon-arrow-left"></i> Back to sign in</a></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ MAIN APP ============ -->
+  <div id="mainApp" hidden>
+
+    <!-- HOME -->
+    <section id="tab-home" class="tab active">
+      <header class="app-header">
+        <div>
+          <h1 id="greeting">Karibu</h1>
+          <p class="muted">Discover verified land across Kenya</p>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" data-action="tab" data-tab="saved" aria-label="Saved"><i class="icon-heart"></i></button>
+          <button class="icon-btn" data-action="tab" data-tab="messages" aria-label="Messages"><i class="icon-bell"></i><span class="dot" id="bellDot" hidden></span></button>
+        </div>
+      </header>
+      <div id="verifyBanner" class="banner" hidden>
+        <i class="icon-mail-warning"></i>
+        <span>Verify your email to list land.</span>
+        <button class="link" data-action="resendVerification">Resend</button>
+        <button class="link" data-action="checkVerified">I've verified</button>
+      </div>
+      <div class="search-wrap">
+        <div class="search-box">
+          <i class="icon-search"></i>
+          <input type="search" id="searchInput" placeholder="Search title, town, county…" autocomplete="off">
+          <button class="filter-btn" data-action="openFilters" aria-label="Filters"><i class="icon-sliders-horizontal"></i><span class="dot" id="filterDot" hidden></span></button>
+        </div>
+      </div>
+      <div class="chips" id="categoryChips"></div>
+      <div class="section-head">
+        <h2 id="resultsTitle">Latest land</h2>
+        <button class="link" data-action="refreshListings"><i class="icon-refresh-cw"></i> Refresh</button>
+      </div>
+      <div id="propertyGrid" class="grid">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      </div>
+    </section>
+
+    <!-- EXPLORE (MAP) -->
+    <section id="tab-explore" class="tab">
+      <div class="map-wrap">
+        <div id="exploreMap" class="map"></div>
+        <div class="map-top">
+          <form class="search-box floating" id="mapSearchForm">
+            <i class="icon-map-pin"></i>
+            <input type="search" id="mapSearchInput" placeholder="Search a town or area in Kenya…" autocomplete="off">
+            <button class="filter-btn" type="submit" aria-label="Search"><i class="icon-search"></i></button>
+          </form>
+          <div class="chips floating-chips" id="mapChips"></div>
+        </div>
+        <button class="fab-loc" data-action="myLocation" aria-label="My location"><i class="icon-locate-fixed"></i></button>
+        <div id="mapCount" class="map-count" hidden></div>
+        <div id="mapPreview" class="map-preview" hidden></div>
+      </div>
+    </section>
+
+    <!-- SAVED -->
+    <section id="tab-saved" class="tab">
+      <header class="page-header"><h2>Saved land</h2></header>
+      <div id="savedGrid" class="grid"></div>
+    </section>
+
+    <!-- MESSAGES -->
+    <section id="tab-messages" class="tab">
+      <header class="page-header"><h2>Messages</h2></header>
+      <div id="conversationList" class="conv-list"></div>
+    </section>
+
+    <!-- ACCOUNT -->
+    <section id="tab-account" class="tab">
+      <header class="page-header"><h2>My account</h2></header>
+      <div class="card profile-card">
+        <div class="avatar" id="accountAvatar">?</div>
+        <div>
+          <h3 id="accountName">—</h3>
+          <p class="muted" id="accountEmail">—</p>
+          <div class="badges" id="accountBadges"></div>
+        </div>
+      </div>
+      <div class="stats" id="accountStats"></div>
+      <div class="menu">
+        <button class="menu-item" data-action="newListing"><span class="mi green"><i class="icon-circle-plus"></i></span><span>List new land</span><i class="icon-chevron-right"></i></button>
+        <button class="menu-item" data-action="openMyListings"><span class="mi blue"><i class="icon-layout-list"></i></span><span>My listings</span><i class="icon-chevron-right"></i></button>
+        <button class="menu-item" data-action="tab" data-tab="saved"><span class="mi pink"><i class="icon-heart"></i></span><span>Saved land</span><i class="icon-chevron-right"></i></button>
+        <button class="menu-item" data-action="openAdmin" id="adminMenuItem" hidden><span class="mi amber"><i class="icon-shield-check"></i></span><span>Admin · Moderation</span><span class="count" id="pendingCount"></span><i class="icon-chevron-right"></i></button>
+        <button class="menu-item" data-action="openSettings"><span class="mi gray"><i class="icon-settings"></i></span><span>Settings</span><i class="icon-chevron-right"></i></button>
+        <button class="menu-item danger" data-action="logout"><span class="mi red"><i class="icon-log-out"></i></span><span>Sign out</span><i class="icon-chevron-right"></i></button>
+      </div>
+    </section>
+
+    <nav class="bottom-nav" id="bottomNav">
+      <button class="nav-item active" data-action="tab" data-tab="home"><span class="nav-icon"><i class="icon-house"></i></span><span>Home</span></button>
+      <button class="nav-item" data-action="tab" data-tab="explore"><span class="nav-icon"><i class="icon-map"></i></span><span>Explore</span></button>
+      <button class="nav-item" data-action="tab" data-tab="saved"><span class="nav-icon"><i class="icon-heart"></i></span><span>Saved</span></button>
+      <button class="nav-item" data-action="tab" data-tab="messages"><span class="nav-icon"><i class="icon-message-circle"></i><span class="badge" id="msgBadge" hidden></span></span><span>Messages</span></button>
+      <button class="nav-item" data-action="tab" data-tab="account"><span class="nav-icon"><i class="icon-user"></i></span><span>Account</span></button>
+    </nav>
+  </div>
+
+  <!-- ============ OVERLAYS ============ -->
+  <section id="ov-detail" class="overlay" aria-hidden="true">
+    <div class="topbar"><button class="icon-btn" data-action="back" aria-label="Back"><i class="icon-arrow-left"></i></button><h3>Land details</h3>
+      <div class="topbar-actions"><button class="icon-btn" data-action="shareListing" aria-label="Share"><i class="icon-share-2"></i></button></div></div>
+    <div class="overlay-scroll" id="detailBody"></div>
+    <div class="detail-cta" id="detailCta"></div>
+  </section>
+
+  <section id="ov-filters" class="overlay sheet" aria-hidden="true">
+    <div class="topbar"><button class="icon-btn" data-action="back" aria-label="Close"><i class="icon-x"></i></button><h3>Filters</h3>
+      <div class="topbar-actions"><button class="link" data-action="resetFilters">Reset</button></div></div>
+    <form class="overlay-scroll form" id="filterForm">
+      <div class="row2">
+        <label class="fg"><span>Min price (KSh)</span><input type="number" name="minPrice" inputmode="numeric" min="0" placeholder="0"></label>
+        <label class="fg"><span>Max price (KSh)</span><input type="number" name="maxPrice" inputmode="numeric" min="0" placeholder="Any"></label>
+      </div>
+      <label class="fg"><span>County</span><select name="county" id="filterCounty"><option value="">All counties</option></select></label>
+      <label class="fg"><span>Sort by</span>
+        <select name="sort">
+          <option value="newest">Newest first</option>
+          <option value="priceAsc">Price: low to high</option>
+          <option value="priceDesc">Price: high to low</option>
+        </select></label>
+      <button class="btn btn-primary btn-block" type="submit">Show results</button>
+    </form>
+  </section>
+
+  <section id="ov-form" class="overlay" aria-hidden="true">
+    <div class="topbar"><button class="icon-btn" data-action="back" aria-label="Back"><i class="icon-arrow-left"></i></button><h3 id="formTitle">List new land</h3></div>
+    <form class="overlay-scroll form" id="listingForm" novalidate>
+      <label class="fg"><span>Title *</span><input name="title" maxlength="120" placeholder="e.g. Prime 1/8 acre plot in Ruiru" required></label>
+      <div class="row2">
+        <label class="fg"><span>Price (KSh) *</span><input name="price" type="number" inputmode="numeric" min="1" placeholder="1500000" required></label>
+        <label class="fg"><span>Size *</span><input name="size" maxlength="60" placeholder="50 x 100 ft / 1 acre" required></label>
+      </div>
+      <div class="row2">
+        <label class="fg"><span>Land use *</span><select name="landUse" id="formLandUse" required></select></label>
+        <label class="fg"><span>Documents</span><select name="titleStatus" id="formTitleStatus"></select></label>
+      </div>
+      <div class="row2">
+        <label class="fg"><span>County *</span><select name="county" id="formCounty" required><option value="">Select…</option></select></label>
+        <label class="fg"><span>Town / area *</span><input name="town" maxlength="80" placeholder="e.g. Ruiru" required></label>
+      </div>
+      <label class="fg"><span>Description *</span><textarea name="description" rows="5" maxlength="5000" placeholder="Access road, water, electricity, nearby amenities, payment terms…" required></textarea></label>
+
+      <div class="fg">
+        <span>Photos * <small class="muted">(up to 6 — the first is the cover)</small></span>
+        <label class="upload">
+          <input type="file" id="photoInput" accept="image/*" multiple>
+          <i class="icon-camera"></i><b>Add photos</b><small>Tap to take or choose photos</small>
+        </label>
+        <div class="thumbs" id="photoThumbs"></div>
+      </div>
+
+      <div class="fg">
+        <span>Location on map * <small class="muted">(tap the map or drag the pin)</small></span>
+        <div class="picker-tools">
+          <input type="search" id="pickerSearch" placeholder="Search place…" autocomplete="off">
+          <button type="button" class="btn btn-ghost sm" data-action="pickerSearch"><i class="icon-search"></i></button>
+          <button type="button" class="btn btn-ghost sm" data-action="pickerLocate"><i class="icon-locate-fixed"></i></button>
+        </div>
+        <div id="pickerMap" class="map picker"></div>
+        <small class="muted" id="pickerCoords">No location selected</small>
+      </div>
+
+      <p class="muted small" id="formNote">Listings are reviewed by our team before they go live — usually within 24 hours.</p>
+      <button class="btn btn-primary btn-block" type="submit" id="publishBtn">Submit for review <i class="icon-check"></i></button>
+    </form>
+  </section>
+
+  <section id="ov-mylistings" class="overlay" aria-hidden="true">
+    <div class="topbar"><button class="icon-btn" data-action="back" aria-label="Back"><i class="icon-arrow-left"></i></button><h3>My listings</h3>
+      <div class="topbar-actions"><button class="icon-btn" data-action="newListing" aria-label="New listing"><i class="icon-plus"></i></button></div></div>
+    <div class="overlay-scroll" id="myListingsBody"></div>
+  </section>
+
+  <section id="ov-chat" class="overlay" aria-hidden="true">
+    <div class="topbar chat-top" id="chatHeader"></div>
+    <div class="overlay-scroll chat-body" id="chatMessages"></div>
+    <form class="chat-input" id="chatForm">
+      <textarea id="chatText" rows="1" maxlength="2000" placeholder="Type a message…"></textarea>
+      <button class="send-btn" type="submit" aria-label="Send"><i class="icon-send"></i></button>
+    </form>
+  </section>
+
+  <section id="ov-admin" class="overlay" aria-hidden="true">
+    <div class="topbar"><button class="icon-btn" data-action="back" aria-label="Back"><i class="icon-arrow-left"></i></button><h3>Moderation</h3>
+      <div class="topbar-actions"><button class="icon-btn" data-action="refreshAdmin" aria-label="Refresh"><i class="icon-refresh-cw"></i></button></div></div>
+    <div class="seg" id="adminSeg">
+      <button class="active" data-action="adminTab" data-status="pending">Pending</button>
+      <button data-action="adminTab" data-status="approved">Live</button>
+      <button data-action="adminTab" data-status="rejected">Rejected</button>
+    </div>
+    <div class="overlay-scroll" id="adminBody"></div>
+  </section>
+
+  <section id="ov-settings" class="overlay" aria-hidden="true">
+    <div class="topbar"><button class="icon-btn" data-action="back" aria-label="Back"><i class="icon-arrow-left"></i></button><h3>Settings</h3></div>
+    <div class="overlay-scroll">
+      <h4 class="menu-label">Profile</h4>
+      <form class="form card" id="profileForm" novalidate>
+        <label class="fg"><span>Full name</span><input name="name" maxlength="80" required></label>
+        <label class="fg"><span>Phone (shown to buyers)</span><input name="phone" type="tel" required></label>
+        <button class="btn btn-primary btn-block" type="submit">Save profile</button>
+      </form>
+
+      <h4 class="menu-label">Security</h4>
+      <form class="form card" id="passwordForm" novalidate>
+        <label class="fg"><span>Current password</span><input name="current" type="password" autocomplete="current-password" required></label>
+        <label class="fg"><span>New password</span><input name="next" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label class="fg"><span>Confirm new password</span><input name="confirm" type="password" autocomplete="new-password" required></label>
+        <button class="btn btn-primary btn-block" type="submit">Change password</button>
+      </form>
+
+      <h4 class="menu-label">Preferences</h4>
+      <div class="menu">
+        <label class="menu-item"><span class="mi gray"><i class="icon-moon"></i></span><span>Dark mode</span><input type="checkbox" class="switch" id="darkToggle"></label>
+      </div>
+
+      <h4 class="menu-label">About</h4>
+      <div class="menu">
+        <button class="menu-item" data-action="openLegal"><span class="mi gray"><i class="icon-file-text"></i></span><span>Terms &amp; Privacy</span><i class="icon-chevron-right"></i></button>
+        <button class="menu-item" data-action="contactSupport"><span class="mi gray"><i class="icon-life-buoy"></i></span><span>Contact support</span><i class="icon-chevron-right"></i></button>
+        <div class="menu-item static"><span class="mi gray"><i class="icon-info"></i></span><span>Version</span><span class="muted" id="appVersion"></span></div>
+      </div>
+
+      <h4 class="menu-label">Danger zone</h4>
+      <div class="menu">
+        <button class="menu-item danger" data-action="deleteAccount"><span class="mi red"><i class="icon-trash-2"></i></span><span>Delete my account</span><i class="icon-chevron-right"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="ov-legal" class="overlay" aria-hidden="true">
+    <div class="topbar"><button class="icon-btn" data-action="back" aria-label="Back"><i class="icon-arrow-left"></i></button><h3>Terms &amp; Privacy</h3></div>
+    <div class="overlay-scroll prose">
+      <h3>Terms of use</h3>
+      <p>Landier is a marketplace that connects people buying and selling land in Kenya. Landier is not a party to any sale and does not hold money on anyone's behalf.</p>
+      <p>Sellers must own the land they list, or be authorised to sell it, and must describe it honestly. Listings are reviewed before they appear, but a review is not a legal guarantee of ownership.</p>
+      <p><b>Before paying any money</b>, buyers should visit the land, do an official search at the Ministry of Lands (Ardhisasa), confirm the seller's ID matches the title, and use a registered advocate for the sale agreement.</p>
+      <p>We may remove listings or accounts that are fraudulent, misleading, or abusive.</p>
+      <h3>Privacy</h3>
+      <p>We store your name, email, and phone number to run your account. Your name and phone number are shown on land you list so buyers can contact you. Messages are visible only to you and the other person in the chat, and to administrators investigating reported fraud.</p>
+      <p>Your location is used only on your device to centre the map; it is not stored. You can delete your account and listings at any time from Settings.</p>
+    </div>
+  </section>
+
+  <div id="dialog" class="dialog-backdrop" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
