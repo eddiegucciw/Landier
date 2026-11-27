@@ -1,195 +1,761 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LANDIER · Find Land. Make It Yours.</title>
-  <link rel="stylesheet" href="style.css">
+  
+  <!-- Fonts & Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@0.453.0/font/lucide.css">
   
-  <!-- Google Maps API (You MUST replace YOUR_GOOGLE_MAPS_API_KEY here) -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
-  
-  <script type="module" src="app.js"></script>
+  <!-- Firebase SDKs (Loaded as modules) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // YOUR FIREBASE CONFIG
+    const firebaseConfig = {
+      apiKey: "AIzaSyACuvTi-yMGkQ4nojapLYeJ8tOZlty2fpI",
+      authDomain: "gumado.firebaseapp.com",
+      projectId: "gumado",
+      storageBucket: "gumado.firebasestorage.app",
+      messagingSenderId: "220205636823",
+      appId: "1:220205636823:web:e194c0bdf9f0e94dfe6492",
+      measurementId: "G-P9B3XKTYDS"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Make Firebase available globally for the inline script
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+    window.firebaseFuncs = {
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      sendPasswordResetEmail,
+      onAuthStateChanged,
+      collection,
+      doc,
+      setDoc,
+      getDoc,
+      getDocs,
+      addDoc,
+      updateDoc,
+      deleteDoc,
+      query,
+      where,
+      serverTimestamp
+    };
+  </script>
+
+  <style>
+    /* ============================================================
+       GLOBAL RESET & DESIGN TOKENS
+       ============================================================ */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --green: #1e7e34;
+      --green-light: #e6f4ea;
+      --green-dark: #0f4d1f;
+      --gray-bg: #f8f9fc;
+      --gray-surface: #ffffff;
+      --gray-border: #e9ecf0;
+      --gray-text: #1e293b;
+      --gray-muted: #64748b;
+      --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+      --radius-card: 18px;
+      --radius-btn: 30px;
+      --radius-sm: 12px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      font-family: var(--font);
+      background: var(--gray-bg);
+      color: var(--gray-text);
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      padding-bottom: 70px;
+    }
+    h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; }
+    .price { font-weight: 700; color: var(--green-dark); font-size: 1.1rem; }
+    .hidden { display: none !important; }
+    .flex { display: flex; }
+    .gap-8 { gap: 8px; }
+    .mt-8 { margin-top: 8px; }
+    .mb-16 { margin-bottom: 16px; }
+
+    /* ============================================================
+       LAYOUT & SCREENS
+       ============================================================ */
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--gray-bg);
+      min-height: 100vh;
+      position: relative;
+      box-shadow: 0 0 40px rgba(0,0,0,0.02);
+    }
+    .screen { display: none; flex-direction: column; animation: fade 0.2s ease; }
+    .screen.active { display: flex; }
+    @keyframes fade { from { opacity: 0.6; } to { opacity: 1; } }
+
+    /* ============================================================
+       AUTH SCREEN
+       ============================================================ */
+    #authScreen { padding: 24px 20px; background: white; min-height: 100vh; }
+    .logo-large { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; color: var(--green); margin-bottom: 4px; }
+    .tagline { color: var(--gray-muted); font-size: 0.9rem; margin-bottom: 32px; }
+    .auth-form { display: flex; flex-direction: column; gap: 16px; }
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+    .input-group label { font-size: 0.85rem; font-weight: 500; color: var(--gray-muted); }
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    .input-wrapper i { position: absolute; left: 14px; color: var(--gray-muted); font-size: 1.1rem; }
+    .input-wrapper input, .input-wrapper select {
+      width: 100%; padding: 14px 14px 14px 44px;
+      border: 1.5px solid var(--gray-border); border-radius: var(--radius-btn);
+      font-family: var(--font); font-size: 0.95rem; background: var(--gray-bg); transition: 0.2s;
+    }
+    .input-wrapper input:focus, .input-wrapper select:focus { outline: none; border-color: var(--green); background: white; }
+    .password-toggle { position: absolute; right: 14px; background: none; border: none; color: var(--gray-muted); font-size: 1.1rem; cursor: pointer; }
+    .btn-primary {
+      background: var(--green); color: white; border: none; padding: 16px;
+      border-radius: var(--radius-btn); font-weight: 600; font-size: 1rem;
+      cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:hover { background: var(--green-dark); }
+    .btn-secondary {
+      background: transparent; border: 1.5px solid var(--gray-border); padding: 14px;
+      border-radius: var(--radius-btn); font-weight: 500; cursor: pointer; transition: 0.2s; color: var(--gray-text);
+    }
+    .btn-secondary:hover { background: var(--gray-bg); }
+    .auth-switch { text-align: center; margin-top: 16px; color: var(--gray-muted); font-size: 0.9rem; }
+    .auth-switch a { color: var(--green); font-weight: 600; text-decoration: none; cursor: pointer; }
+    .demo-hint { font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 20px; }
+
+    /* ============================================================
+       HOME SCREEN
+       ============================================================ */
+    .home-header {
+      padding: 20px 16px 8px; display: flex; justify-content: space-between;
+      align-items: center; background: white;
+    }
+    .welcome-text h2 { font-size: 1.4rem; font-weight: 700; }
+    .welcome-text p { font-size: 0.8rem; color: var(--gray-muted); }
+    .header-actions { display: flex; gap: 16px; }
+    .icon-btn {
+      background: none; border: none; font-size: 1.3rem; color: var(--gray-text);
+      cursor: pointer; position: relative;
+    }
+    .icon-btn .dot {
+      position: absolute; top: -2px; right: -2px; width: 8px; height: 8px;
+      background: #e11d48; border-radius: 50%; border: 2px solid white;
+    }
+    .search-bar { padding: 8px 16px 12px; background: white; }
+    .search-inner {
+      display: flex; align-items: center; background: var(--gray-bg);
+      border-radius: var(--radius-btn); padding: 6px 6px 6px 18px; border: 1px solid var(--gray-border);
+    }
+    .search-inner i { color: var(--gray-muted); font-size: 1.1rem; }
+    .search-inner input {
+      flex: 1; border: none; background: transparent; padding: 12px 10px;
+      font-family: var(--font); font-size: 0.95rem; outline: none;
+    }
+    .filter-btn {
+      background: white; border: 1px solid var(--gray-border); border-radius: 50%;
+      width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .categories {
+      display: flex; gap: 8px; padding: 8px 16px 16px; overflow-x: auto;
+      background: white; scrollbar-width: none;
+    }
+    .categories::-webkit-scrollbar { display: none; }
+    .cat-chip {
+      padding: 10px 20px; background: var(--gray-bg); border-radius: var(--radius-btn);
+      font-size: 0.9rem; font-weight: 500; white-space: nowrap; cursor: pointer;
+      transition: 0.2s; border: 1px solid transparent;
+    }
+    .cat-chip.active { background: var(--green); color: white; }
+    .section-title { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 8px; }
+    .section-title h3 { font-size: 1.1rem; }
+    .section-title span { font-size: 0.85rem; color: var(--green); font-weight: 500; cursor: pointer; }
+    .property-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px 16px; }
+    .property-card {
+      background: white; border-radius: var(--radius-card); overflow: hidden;
+      box-shadow: var(--shadow-sm); transition: 0.2s; cursor: pointer; position: relative;
+    }
+    .property-card:active { transform: scale(0.98); }
+    .card-image { position: relative; aspect-ratio: 1 / 1; background: #eef1f5; }
+    .card-image img { width: 100%; height: 100%; object-fit: cover; }
+    .fav-btn {
+      position: absolute; top: 8px; right: 8px; background: rgba(255, 255, 255, 0.9);
+      border: none; border-radius: 50%; width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      color: #94a3b8; font-size: 0.9rem; backdrop-filter: blur(4px);
+    }
+    .fav-btn.saved { color: #e11d48; }
+    .badge-featured {
+      position: absolute; top: 8px; left: 8px; background: var(--green); color: white;
+      font-size: 0.65rem; padding: 3px 10px; border-radius: 20px; font-weight: 600;
+    }
+    .card-content { padding: 10px 10px 12px; }
+    .card-title { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-price { font-size: 1rem; font-weight: 700; color: var(--green-dark); margin: 2px 0; }
+    .card-location { font-size: 0.7rem; color: var(--gray-muted); display: flex; align-items: center; gap: 4px; }
+    .card-specs { font-size: 0.65rem; color: var(--gray-muted); margin-top: 2px; }
+    .availability {
+      font-size: 0.65rem; color: var(--green); font-weight: 500; margin-top: 4px;
+      display: inline-block; background: var(--green-light); padding: 2px 8px; border-radius: 20px;
+    }
+    .availability.sold { background: #fee2e2; color: #991b1b; }
+    .availability.reserved { background: #fef3c7; color: #92400e; }
+    .availability.pending { background: #e0f2fe; color: #0369a1; }
+
+    /* ============================================================
+       BOTTOM NAV
+       ============================================================ */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px;
+      margin: 0 auto; background: white; display: flex; justify-content: space-around;
+      padding: 10px 0 14px; border-top: 1px solid var(--gray-border);
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.02); z-index: 100;
+    }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-size: 0.7rem; color: var(--gray-muted); cursor: pointer;
+      transition: 0.2s; background: none; border: none; font-family: var(--font);
+    }
+    .nav-item i { font-size: 1.3rem; }
+    .nav-item.active { color: var(--green); font-weight: 600; }
+    .nav-item.active i { color: var(--green); }
+
+    /* ============================================================
+       EXPLORE / MAP
+       ============================================================ */
+    #exploreScreen .map-container { padding: 16px; height: calc(100vh - 70px); display: flex; flex-direction: column; }
+    .map-placeholder {
+      background: #eef1f5; border-radius: var(--radius-card); flex: 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; color: var(--gray-muted); border: 1px dashed var(--gray-border); padding: 24px; text-align: center;
+    }
+    .map-placeholder i { font-size: 3rem; color: var(--green); opacity: 0.5; }
+
+    /* ============================================================
+       SAVED
+       ============================================================ */
+    #savedScreen .property-grid { padding-top: 8px; }
+
+    /* ============================================================
+       MESSAGES
+       ============================================================ */
+    .conversation-list { padding: 8px 16px; }
+    .conversation-item {
+      display: flex; gap: 12px; padding: 14px 0;
+      border-bottom: 1px solid var(--gray-border); cursor: pointer;
+    }
+    .conv-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: var(--green-light); }
+    .conv-info { flex: 1; }
+    .conv-name { font-weight: 600; font-size: 0.95rem; }
+    .conv-property { font-size: 0.75rem; color: var(--green); font-weight: 500; }
+    .conv-preview { font-size: 0.8rem; color: var(--gray-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+    .conv-meta { text-align: right; font-size: 0.7rem; color: var(--gray-muted); }
+    .unread-badge { background: var(--green); color: white; font-size: 0.65rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
+
+    /* Chat View */
+    .chat-view { display: flex; flex-direction: column; height: calc(100vh - 140px); background: white; }
+    .chat-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-border); display: flex; align-items: center; gap: 12px; background: white; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--gray-bg); }
+    .msg-bubble { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 0.9rem; position: relative; }
+    .msg-bubble.buyer { align-self: flex-end; background: var(--green); color: white; border-bottom-right-radius: 4px; }
+    .msg-bubble.seller { align-self: flex-start; background: white; border: 1px solid var(--gray-border); border-bottom-left-radius: 4px; }
+    .msg-time { font-size: 0.65rem; opacity: 0.7; margin-top: 4px; text-align: right; }
+    .chat-input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--gray-border); background: white; }
+    .chat-input input { flex: 1; padding: 12px 16px; border: 1px solid var(--gray-border); border-radius: 30px; font-family: var(--font); outline: none; }
+    .chat-input button { background: var(--green); color: white; border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+    /* ============================================================
+       ACCOUNT
+       ============================================================ */
+    .account-header { padding: 24px 16px 16px; background: white; display: flex; align-items: center; gap: 16px; }
+    .avatar-large { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--green-light); }
+    .account-menu { padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 4px; }
+    .menu-item {
+      display: flex; align-items: center; gap: 14px; padding: 14px 12px;
+      background: white; border-radius: var(--radius-sm); cursor: pointer;
+      font-size: 0.95rem; border: none; width: 100%; text-align: left; font-family: var(--font); color: var(--gray-text);
+    }
+    .menu-item i { width: 24px; color: var(--gray-muted); }
+    .menu-item.logout { color: #dc2626; }
+
+    /* ============================================================
+       PROPERTY DETAIL
+       ============================================================ */
+    #detailScreen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; max-width: 480px; margin: 0 auto; background: white; z-index: 200; overflow-y: auto; display: none; }
+    #detailScreen.active { display: block; }
+    .detail-image { width: 100%; height: 260px; object-fit: cover; }
+    .detail-body { padding: 16px; }
+    .detail-price { font-size: 1.6rem; font-weight: 800; color: var(--green-dark); }
+    .detail-actions { display: flex; gap: 12px; margin: 16px 0; }
+
+    /* ============================================================
+       UTILITY / TOAST
+       ============================================================ */
+    .toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px;
+      font-size: 0.85rem; z-index: 999; opacity: 0; transition: 0.3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+
+    /* ============================================================
+       ADD PROPERTY OVERLAY
+       ============================================================ */
+    #addPropertyScreen {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; max-width: 480px;
+      margin: 0 auto; background: white; z-index: 200; overflow-y: auto; display: none;
+    }
+
+    /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+    @media (min-width: 768px) {
+      .app-container { max-width: 480px; border-radius: 24px; margin: 20px auto; min-height: calc(100vh - 40px); box-shadow: 0 24px 60px rgba(0,0,0,0.08); }
+      .bottom-nav { max-width: 480px; border-radius: 0 0 24px 24px; }
+    }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <!-- ================= AUTH SCREEN ================= -->
-    <div id="authScreen" class="screen active">
-      <div class="logo-container">
-        <h1 class="logo">LANDIER</h1>
-        <p class="tagline">Find Land. Make It Yours.</p>
-      </div>
-      
-      <!-- Login -->
-      <div id="loginForm" class="auth-form">
-        <h2>Sign In</h2>
-        <div class="input-group"><input type="email" id="loginEmail" placeholder="Email" required></div>
-        <div class="input-group"><input type="password" id="loginPassword" placeholder="Password" required></div>
-        <button id="loginBtn" class="btn-primary">Sign In</button>
-        <p class="auth-switch">No account? <a href="#" id="showRegister">Register</a></p>
-        <p class="auth-switch"><a href="#" id="showForgot">Forgot password?</a></p>
-      </div>
 
-      <!-- Register -->
-      <div id="registerForm" class="auth-form hidden">
-        <h2>Create Account</h2>
-        <div class="input-group"><input type="text" id="regName" placeholder="Full Name" required></div>
-        <div class="input-group"><input type="email" id="regEmail" placeholder="Email" required></div>
-        <div class="input-group"><input type="tel" id="regPhone" placeholder="Phone Number" required></div>
-        <div class="input-group"><input type="password" id="regPassword" placeholder="Password" required></div>
-        <div class="input-group"><input type="password" id="regConfirm" placeholder="Confirm Password" required></div>
-        <button id="registerBtn" class="btn-primary">Register</button>
-        <p class="auth-switch">Already have an account? <a href="#" id="showLogin">Sign In</a></p>
-      </div>
+<div class="app-container" id="app">
+  <!-- ================= AUTH ================= -->
+  <div id="authScreen" class="screen active">
+    <div class="logo-large">LANDIER</div>
+    <div class="tagline">Find Land. Make It Yours.</div>
 
-      <!-- Forgot Password -->
-      <div id="forgotForm" class="auth-form hidden">
-        <h2>Reset Password</h2>
-        <div class="input-group"><input type="email" id="resetEmail" placeholder="Email" required></div>
-        <button id="resetBtn" class="btn-primary">Send Reset Link</button>
-        <p class="auth-switch"><a href="#" id="backToLogin">Back to Login</a></p>
+    <!-- Login -->
+    <div id="loginForm" class="auth-form">
+      <div class="input-group">
+        <label>Email</label>
+        <div class="input-wrapper"><i class="lucide icon-lucide-mail"></i><input type="email" id="loginEmail" placeholder="demo@landier.ke"></div>
       </div>
+      <div class="input-group">
+        <label>Password</label>
+        <div class="input-wrapper">
+          <i class="lucide icon-lucide-lock"></i>
+          <input type="password" id="loginPassword" placeholder="••••••••">
+          <button class="password-toggle" onclick="togglePassword('loginPassword')"><i class="lucide icon-lucide-eye"></i></button>
+        </div>
+      </div>
+      <button class="btn-primary" id="loginBtn"><i class="lucide icon-lucide-log-in"></i> Sign In</button>
+      <div class="auth-switch">No account? <a onclick="showRegister()">Register</a></div>
+      <div class="auth-switch"><a onclick="showForgot()">Forgot password?</a></div>
     </div>
 
-    <!-- ================= MAIN APP ================= -->
-    <div id="mainApp" class="screen hidden">
-      
-      <header class="home-header">
-        <div>
-          <h1>Welcome to LANDIER</h1>
+    <!-- Register -->
+    <div id="registerForm" class="auth-form hidden">
+      <h3 style="margin-bottom:8px;">Create Account</h3>
+      <div class="input-group"><label>Full Name</label><div class="input-wrapper"><i class="lucide icon-lucide-user"></i><input type="text" id="regName" placeholder="Jane Wanjiku"></div></div>
+      <div class="input-group"><label>Phone</label><div class="input-wrapper"><i class="lucide icon-lucide-phone"></i><input type="tel" id="regPhone" placeholder="0712 345 678"></div></div>
+      <div class="input-group"><label>Email</label><div class="input-wrapper"><i class="lucide icon-lucide-mail"></i><input type="email" id="regEmail" placeholder="jane@example.com"></div></div>
+      <div class="input-group"><label>Password</label><div class="input-wrapper"><i class="lucide icon-lucide-lock"></i><input type="password" id="regPassword" placeholder="••••••••"><button class="password-toggle" onclick="togglePassword('regPassword')"><i class="lucide icon-lucide-eye"></i></button></div></div>
+      <div class="input-group"><label>Confirm Password</label><div class="input-wrapper"><i class="lucide icon-lucide-lock"></i><input type="password" id="regConfirmPassword" placeholder="••••••••"></div></div>
+      <div class="input-group"><label>County / Town</label><div class="input-wrapper"><i class="lucide icon-lucide-map-pin"></i><input type="text" id="regCounty" placeholder="Nairobi, Kilimani"></div></div>
+      <button class="btn-primary" id="registerBtn"><i class="lucide icon-lucide-user-plus"></i> Register</button>
+      <div class="auth-switch">Already have an account? <a onclick="showLogin()">Sign In</a></div>
+    </div>
+
+    <!-- Forgot Password -->
+    <div id="forgotForm" class="auth-form hidden">
+      <h3 style="margin-bottom:8px;">Reset Password</h3>
+      <div class="input-group"><label>Email</label><div class="input-wrapper"><i class="lucide icon-lucide-mail"></i><input type="email" id="resetEmail" placeholder="jane@example.com"></div></div>
+      <button class="btn-primary" id="resetBtn"><i class="lucide icon-lucide-send"></i> Send Reset Link</button>
+      <div class="auth-switch"><a onclick="showLogin()">Back to Login</a></div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APP ================= -->
+  <div id="mainApp" class="screen" style="display:none; flex-direction:column; width:100%;">
+    
+    <!-- HOME -->
+    <div id="homeScreen" class="screen active" style="padding-bottom: 80px;">
+      <div class="home-header">
+        <div class="welcome-text">
+          <h2>Welcome to LANDIER</h2>
           <p>Find Land. Make It Yours.</p>
         </div>
         <div class="header-actions">
-          <button id="notificationBtn" class="icon-btn">🔔</button>
-          <button class="icon-btn" onclick="document.querySelector('[data-tab=saved]').click()">❤️</button>
+          <button class="icon-btn" onclick="switchTab('saved')"><i class="lucide icon-lucide-heart"></i></button>
+          <button class="icon-btn" onclick="switchTab('messages')"><i class="lucide icon-lucide-bell"></i><span class="dot"></span></button>
         </div>
-      </header>
-
+      </div>
       <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Search land by location, title...">
-        <button id="searchBtn" class="btn-icon">🔍</button>
-      </div>
-
-      <div class="categories">
-        <button class="category-btn active" data-cat="All">All</button>
-        <button class="category-btn" data-cat="Residential">Residential</button>
-        <button class="category-btn" data-cat="Commercial">Commercial</button>
-        <button class="category-btn" data-cat="Agricultural">Agricultural</button>
-        <button class="category-btn" data-cat="Industrial">Industrial</button>
-      </div>
-
-      <!-- Home Screen -->
-      <div id="homeScreen" class="screen active">
-        <div class="section-title"><h2>Featured Land</h2></div>
-        <div id="featuredGrid" class="property-grid"><p class="empty-state">Loading listings...</p></div>
-        <div class="section-title"><h2>Recently Added</h2></div>
-        <div id="recentGrid" class="property-grid"></div>
-      </div>
-
-      <!-- Explore Screen -->
-      <div id="exploreScreen" class="screen">
-        <h2>Explore Land on Map</h2>
-        <div id="mapContainer" style="height: 60vh; width: 100%; border-radius: 12px; margin-top: 12px; background: #e2e8f0;"></div>
-        <div id="mapFallback" class="map-fallback hidden">
-          <p>⚠️ Google Maps API key missing or invalid. Please configure it in <code>index.html</code>.</p>
+        <div class="search-inner">
+          <i class="lucide icon-lucide-search"></i>
+          <input type="text" id="searchInput" placeholder="Search land by location, title..." oninput="filterProperties()">
+          <button class="filter-btn" onclick="showToast('Use categories and sorting below.')"><i class="lucide icon-lucide-sliders"></i></button>
         </div>
       </div>
-
-      <!-- Saved Screen -->
-      <div id="savedScreen" class="screen">
-        <h2>Saved Land</h2>
-        <div id="savedGrid" class="property-grid"><p class="empty-state">No saved land yet.</p></div>
+      <div class="categories" id="categoryFilters">
+        <div class="cat-chip active" data-cat="All" onclick="setCategory('All', this)">All</div>
+        <div class="cat-chip" data-cat="Residential" onclick="setCategory('Residential', this)">Residential</div>
+        <div class="cat-chip" data-cat="Commercial" onclick="setCategory('Commercial', this)">Commercial</div>
+        <div class="cat-chip" data-cat="Agricultural" onclick="setCategory('Agricultural', this)">Agricultural</div>
+        <div class="cat-chip" data-cat="Industrial" onclick="setCategory('Industrial', this)">Industrial</div>
       </div>
-
-      <!-- Messages Screen -->
-      <div id="messagesScreen" class="screen">
-        <h2>Messages</h2>
-        <div id="conversationList" class="conversation-list">
-          <p class="empty-state">No messages yet. Start a chat from a listing.</p>
-        </div>
+      <div class="section-title">
+        <h3>Featured Properties</h3>
+        <span onclick="toggleSort()">Sort <i class="lucide icon-lucide-chevron-down"></i></span>
       </div>
-
-      <!-- Account Screen -->
-      <div id="accountScreen" class="screen">
-        <h2>My Account</h2>
-        <div id="profileInfo" class="profile-card">Loading profile...</div>
-        <div class="account-actions">
-          <button id="activateSellerBtn" class="btn-primary">Activate Seller Account</button>
-          <button id="sellerDashboardBtn" class="btn-secondary hidden">Seller Dashboard</button>
-          <button id="logoutBtn" class="btn-secondary" style="color: #dc2626; border-color: #fca5a5;">Logout</button>
-        </div>
-      </div>
-
-      <!-- Bottom Navigation -->
-      <nav class="bottom-nav">
-        <button class="nav-item active" data-tab="home">🏠 Home</button>
-        <button class="nav-item" data-tab="explore">🗺️ Explore</button>
-        <button class="nav-item" data-tab="saved">❤️ Saved</button>
-        <button class="nav-item" data-tab="messages">💬 Messages</button>
-        <button class="nav-item" data-tab="account">👤 Account</button>
-      </nav>
+      <div id="propertyGrid" class="property-grid"><p style="grid-column:span 2; text-align:center; color:var(--gray-muted); padding:40px 0;">Loading listings...</p></div>
     </div>
 
-    <!-- ================= MODALS ================= -->
-    <!-- Seller Dashboard Modal -->
-    <div id="sellerModal" class="modal hidden">
-      <div class="modal-content">
-        <h2>Seller Dashboard</h2>
-        <button id="addLandBtn" class="btn-primary" style="margin-bottom: 16px;">+ Add New Land</button>
-        <div id="myListings"></div>
-        <button id="closeSellerModal" class="btn-secondary" style="margin-top: 16px; width: 100%;">Close</button>
+    <!-- EXPLORE -->
+    <div id="exploreScreen" class="screen">
+      <div class="map-container">
+        <h3 style="margin-bottom:12px;">Explore Land on Map</h3>
+        <div class="map-placeholder">
+          <i class="lucide icon-lucide-map"></i>
+          <p><strong>Google Maps Integration</strong></p>
+          <p style="font-size:0.8rem; max-width:300px;">To enable the interactive map, add your Google Maps API key in the <code>&lt;script&gt;</code> tag.</p>
+          <div id="exploreGrid" class="property-grid" style="margin-top:20px; width:100%;"></div>
+        </div>
       </div>
     </div>
 
-    <!-- Add Land Modal -->
-    <div id="addLandModal" class="modal hidden">
-      <div class="modal-content">
-        <h2>Add Land Listing</h2>
-        
-        <div id="step1" class="step active">
-          <h3>Step 1: Land Information</h3>
-          <input type="text" id="landTitle" placeholder="Land Title (e.g. Prime Plot in Ruiru)">
-          <input type="number" id="landPrice" placeholder="Price (KSh)">
-          <input type="text" id="landSize" placeholder="Size (e.g. 50 x 100 ft)">
-          <select id="landCategory">
+    <!-- SAVED -->
+    <div id="savedScreen" class="screen">
+      <div class="section-title"><h3>Saved Land</h3></div>
+      <div id="savedGrid" class="property-grid" style="padding-top:0;"></div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div id="messagesScreen" class="screen">
+      <div id="conversationListContainer">
+        <div class="section-title"><h3>Messages</h3></div>
+        <div class="conversation-list" id="conversationList"></div>
+      </div>
+      <div id="chatView" class="chat-view hidden">
+        <div class="chat-header">
+          <button class="icon-btn" onclick="closeChat()"><i class="lucide icon-lucide-arrow-left"></i></button>
+          <div id="chatHeaderName" style="font-weight:600;">Chat</div>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+          <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMessage()">
+          <button onclick="sendMessage()"><i class="lucide icon-lucide-send"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNT -->
+    <div id="accountScreen" class="screen">
+      <div class="account-header">
+        <img src="https://i.pravatar.cc/150?img=32" alt="Profile" class="avatar-large" id="accountAvatar">
+        <div>
+          <h3 id="accountName">Loading...</h3>
+          <p id="accountEmail" style="font-size:0.85rem; color:var(--gray-muted);"></p>
+          <p id="accountLocation" style="font-size:0.8rem; color:var(--gray-muted);"></p>
+          <p id="accountRole" style="font-size:0.75rem; color:var(--green); font-weight:500; margin-top:2px;">Buyer</p>
+        </div>
+      </div>
+      <div class="account-menu">
+        <button class="menu-item" onclick="showToast('Edit profile coming soon.')"><i class="lucide icon-lucide-pencil"></i> Edit Profile</button>
+        <button class="menu-item" onclick="switchTab('saved')"><i class="lucide icon-lucide-heart"></i> Saved Land</button>
+        <button class="menu-item" onclick="activateSeller()"><i class="lucide icon-lucide-badge-check"></i> Activate Seller</button>
+        <button class="menu-item" onclick="openAddProperty()"><i class="lucide icon-lucide-plus-circle"></i> Add Land</button>
+        <button class="menu-item" onclick="showMyListings()"><i class="lucide icon-lucide-list"></i> My Listings</button>
+        <button class="menu-item logout" onclick="logout()"><i class="lucide icon-lucide-log-out"></i> Logout</button>
+      </div>
+    </div>
+
+    <!-- PROPERTY DETAIL (Overlay) -->
+    <div id="detailScreen">
+      <div style="padding:16px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--gray-border); background:white; position:sticky; top:0; z-index:10;">
+        <button class="icon-btn" onclick="closeDetail()"><i class="lucide icon-lucide-arrow-left"></i></button>
+        <h3 id="detailTitle">Property Detail</h3>
+      </div>
+      <div id="detailContent" class="detail-content"></div>
+    </div>
+
+    <!-- ADD PROPERTY (Overlay) -->
+    <div id="addPropertyScreen">
+      <div style="padding:16px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--gray-border); background:white; position:sticky; top:0; z-index:10;">
+        <button class="icon-btn" onclick="closeAddProperty()"><i class="lucide icon-lucide-arrow-left"></i></button>
+        <h3>Add New Land</h3>
+      </div>
+      <div style="padding:16px;">
+        <div class="input-group"><label>Land Title</label><input type="text" id="addTitle" placeholder="e.g. Prime Plot in Ruiru" style="padding:14px; border:1.5px solid var(--gray-border); border-radius:12px;"></div>
+        <div class="input-group mt-8"><label>Price (KSh)</label><input type="number" id="addPrice" placeholder="1500000" style="padding:14px; border:1.5px solid var(--gray-border); border-radius:12px;"></div>
+        <div class="input-group mt-8"><label>Location</label><input type="text" id="addLocation" placeholder="Ruiru, Kiambu" style="padding:14px; border:1.5px solid var(--gray-border); border-radius:12px;"></div>
+        <div class="input-group mt-8"><label>Category</label>
+          <select id="addCategory" style="padding:14px; border:1.5px solid var(--gray-border); border-radius:12px;">
             <option value="Residential">Residential</option>
             <option value="Commercial">Commercial</option>
             <option value="Agricultural">Agricultural</option>
             <option value="Industrial">Industrial</option>
           </select>
-          <input type="text" id="landCounty" placeholder="County (e.g. Kiambu)">
-          <input type="text" id="landTown" placeholder="Town (e.g. Ruiru)">
-          <textarea id="landDescription" placeholder="Detailed Description"></textarea>
-          <button id="nextStep2" class="btn-primary">Next Step</button>
         </div>
-
-        <div id="step2" class="step hidden">
-          <h3>Step 2: Photographs</h3>
-          <input type="file" id="landImages" accept="image/*" multiple>
-          <div id="imagePreview" style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;"></div>
-          <button id="nextStep3" class="btn-primary" style="margin-top: 16px;">Next Step</button>
-        </div>
-
-        <div id="step3" class="step hidden">
-          <h3>Step 3: Location</h3>
-          <div id="locationMap" style="height: 250px; background: #e2e8f0; border-radius: 8px; margin-bottom: 12px;"></div>
-          <input type="text" id="mapSearch" placeholder="Search location to center map...">
-          <button id="searchMapBtn" class="btn-secondary" style="margin-top: 8px;">Search</button>
-          <p style="margin-top: 12px; font-size: 0.9rem;">Selected Coordinates: <span id="selectedCoords" style="font-weight: bold; color: var(--green);">None</span></p>
-          <button id="nextStep4" class="btn-primary" style="margin-top: 16px;">Next Step</button>
-        </div>
-
-        <div id="step4" class="step hidden">
-          <h3>Step 4: Publish</h3>
-          <p style="margin-bottom: 16px; font-size: 0.9rem; color: var(--gray-muted);">By clicking publish, your listing will be submitted for moderation. It will appear publicly once approved.</p>
-          <button id="publishLandBtn" class="btn-primary">Publish Land</button>
-        </div>
+        <div class="input-group mt-8"><label>Size</label><input type="text" id="addSize" placeholder="50 × 100 ft" style="padding:14px; border:1.5px solid var(--gray-border); border-radius:12px;"></div>
+        <div class="input-group mt-8"><label>Description</label><textarea id="addDescription" rows="3" placeholder="Describe the land..." style="padding:14px; border:1.5px solid var(--gray-border); border-radius:12px; font-family:var(--font);"></textarea></div>
         
-        <button id="closeAddLand" class="btn-secondary" style="margin-top: 16px; width: 100%;">Cancel</button>
+        <div class="input-group mt-8">
+          <label>Upload Photographs</label>
+          <input type="file" id="addImageFile" accept="image/*" style="padding:14px; border:1.5px solid var(--gray-border); border-radius:12px;">
+          <div id="imagePreview" style="margin-top:8px;"></div>
+        </div>
+
+        <button class="btn-primary mt-8" style="width:100%;" id="publishBtn"><i class="lucide icon-lucide-check"></i> Publish Land</button>
       </div>
     </div>
   </div>
+
+  <!-- ================= BOTTOM NAV ================= -->
+  <div id="bottomNav" class="bottom-nav" style="display:none;">
+    <button class="nav-item active" data-nav="home" onclick="switchTab('home')"><i class="lucide icon-lucide-home"></i> Home</button>
+    <button class="nav-item" data-nav="explore" onclick="switchTab('explore')"><i class="lucide icon-lucide-map"></i> Explore</button>
+    <button class="nav-item" data-nav="saved" onclick="switchTab('saved')"><i class="lucide icon-lucide-heart"></i> Saved</button>
+    <button class="nav-item" data-nav="messages" onclick="switchTab('messages')"><i class="lucide icon-lucide-message-circle"></i> Messages</button>
+    <button class="nav-item" data-nav="account" onclick="switchTab('account')"><i class="lucide icon-lucide-user"></i> Account</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+  // Wait for Firebase to load from the module script above
+  window.addEventListener('DOMContentLoaded', () => {
+    // Check if Firebase is ready
+    const checkFirebase = setInterval(() => {
+      if (window.firebaseAuth && window.firebaseDb) {
+        clearInterval(checkFirebase);
+        initApp();
+      }
+    }, 100);
+  });
+
+  let currentUser = null;
+  let properties = [];
+  let savedProperties = [];
+  let currentCategory = 'All';
+  let searchQuery = '';
+  let currentSort = 'default';
+  let activeChatId = null;
+
+  function initApp() {
+    const auth = window.firebaseAuth;
+    const { onAuthStateChanged } = window.firebaseFuncs;
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      if (user) {
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('bottomNav').style.display = 'flex';
+        await loadListings();
+        updateAccountUI();
+      } else {
+        document.getElementById('authScreen').style.display = 'block';
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('bottomNav').style.display = 'none';
+      }
+    });
+
+    // Auth Form Switchers
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('loginEmail').value;
+      const pass = document.getElementById('loginPassword').value;
+      try {
+        await window.firebaseFuncs.signInWithEmailAndPassword(auth, email, pass);
+      } catch (err) { alert('Login failed: ' + err.message); }
+    });
+
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const name = document.getElementById('regName').value;
+      const email = document.getElementById('regEmail').value;
+      const phone = document.getElementById('regPhone').value;
+      const pass = document.getElementById('regPassword').value;
+      const confirm = document.getElementById('regConfirmPassword').value;
+      
+      if (pass !== confirm) return alert('Passwords do not match');
+      try {
+        const cred = await window.firebaseFuncs.createUserWithEmailAndPassword(auth, email, pass);
+        await window.firebaseFuncs.setDoc(window.firebaseFuncs.doc(window.firebaseDb, 'users', cred.user.uid), {
+          fullName: name,
+          email: email,
+          phone: phone,
+          sellerEnabled: false,
+          createdAt: window.firebaseFuncs.serverTimestamp()
+        });
+        alert('Registration successful!');
+      } catch (err) { alert('Registration failed: ' + err.message); }
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+      const email = document.getElementById('resetEmail').value;
+      try {
+        await window.firebaseFuncs.sendPasswordResetEmail(auth, email);
+        alert('Reset link sent!');
+      } catch (err) { alert(err.message); }
+    });
+
+    // Add Property Upload Logic
+    document.getElementById('addImageFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const scale = MAX_WIDTH / img.width;
+          canvas.width = MAX_WIDTH;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const base64Str = canvas.toDataURL('image/jpeg', 0.7);
+          document.getElementById('imagePreview').innerHTML = `<img src="${base64Str}" style="width:100px; border-radius:8px;">`;
+          window.tempBase64Image = base64Str;
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById('publishBtn').addEventListener('click', async () => {
+      if (!window.tempBase64Image) return alert('Please upload an image.');
+      const db = window.firebaseDb;
+      const { collection, addDoc, serverTimestamp } = window.firebaseFuncs;
+      
+      try {
+        await addDoc(collection(db, 'landListings'), {
+          sellerId: auth.currentUser.uid,
+          title: document.getElementById('addTitle').value,
+          price: Number(document.getElementById('addPrice').value),
+          location: document.getElementById('addLocation').value,
+          landUse: document.getElementById('addCategory').value,
+          size: document.getElementById('addSize').value,
+          description: document.getElementById('addDescription').value,
+          imageUrls: [window.tempBase64Image],
+          moderationStatus: 'Approved', // Auto-approve for demo
+          createdAt: serverTimestamp()
+        });
+        alert('Land published successfully!');
+        closeAddProperty();
+        loadListings();
+      } catch (err) { alert('Error: ' + err.message); }
+    });
+  }
+
+  async function loadListings() {
+    const db = window.firebaseDb;
+    const { collection, query, where, getDocs } = window.firebaseFuncs;
+    const grid = document.getElementById('propertyGrid');
+    grid.innerHTML = '<p style="grid-column:span 2; text-align:center; color:var(--gray-muted); padding:40px 0;">Loading...</p>';
+
+    try {
+      const q = query(collection(db, 'landListings'), where('moderationStatus', '==', 'Approved'));
+      const snap = await getDocs(q);
+      properties = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderGrid();
+    } catch (err) {
+      grid.innerHTML = '<p style="grid-column:span 2; text-align:center; color:red; padding:40px 0;">Error loading listings.</p>';
+      console.error(err);
+    }
+  }
+
+  function renderGrid() {
+    let filtered = properties.filter(p => {
+      const matchCat = currentCategory === 'All' || p.landUse === currentCategory;
+      const matchSearch = searchQuery === '' || p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.location.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchCat && matchSearch;
+    });
+
+    if (currentSort === 'price-asc') filtered.sort((a, b) => a.price - b.price);
+    if (currentSort === 'price-desc') filtered.sort((a, b) => b.price - a.price);
+
+    const grid = document.getElementById('propertyGrid');
+    if (filtered.length === 0) {
+      grid.innerHTML = '<p style="grid-column:span 2; text-align:center; color:var(--gray-muted); padding:40px 0;">No land found.</p>';
+      return;
+    }
+
+    grid.innerHTML = filtered.map(p => `
+      <div class="property-card" onclick="openPropertyDetail('${p.id}')">
+        <div class="card-image">
+          <img src="${p.imageUrls[0]}" alt="${p.title}" loading="lazy">
+          ${p.featured ? '<span class="badge-featured">Featured</span>' : ''}
+        </div>
+        <div class="card-content">
+          <div class="card-title">${p.title}</div>
+          <div class="card-price">KSh ${p.price.toLocaleString()}</div>
+          <div class="card-location"><i class="lucide icon-lucide-map-pin"></i> ${p.location}</div>
+          <div class="card-specs">${p.size}</div>
+          <span class="availability">Available</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateAccountUI() {
+    if (!currentUser) return;
+    document.getElementById('accountName').textContent = currentUser.email.split('@')[0];
+    document.getElementById('accountEmail').textContent = currentUser.email;
+  }
+
+  // UI Helpers (Globals)
+  window.showRegister = () => { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('registerForm').classList.remove('hidden'); };
+  window.showLogin = () => { document.getElementById('registerForm').classList.add('hidden'); document.getElementById('forgotForm').classList.add('hidden'); document.getElementById('loginForm').classList.remove('hidden'); };
+  window.showForgot = () => { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('forgotForm').classList.remove('hidden'); };
+  window.togglePassword = (id) => { const el = document.getElementById(id); el.type = el.type === 'password' ? 'text' : 'password'; };
+  window.logout = () => window.firebaseFuncs.signOut(window.firebaseAuth);
+  
+  window.switchTab = (tab) => {
+    document.querySelectorAll('#mainApp > .screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(tab + 'Screen').classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector(`.nav-item[data-nav="${tab}"]`).classList.add('active');
+    if (tab === 'home') renderGrid();
+  };
+
+  window.setCategory = (cat, el) => { currentCategory = cat; document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); renderGrid(); };
+  window.filterProperties = () => { searchQuery = document.getElementById('searchInput').value; renderGrid(); };
+  window.toggleSort = () => { currentSort = currentSort === 'default' ? 'price-asc' : currentSort === 'price-asc' ? 'price-desc' : 'default'; renderGrid(); };
+  window.showToast = (msg) => { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); };
+
+  window.openAddProperty = () => { document.getElementById('addPropertyScreen').style.display = 'block'; };
+  window.closeAddProperty = () => { document.getElementById('addPropertyScreen').style.display = 'none'; };
+  
+  window.openPropertyDetail = (id) => {
+    const p = properties.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('detailTitle').textContent = p.title;
+    document.getElementById('detailContent').innerHTML = `
+      <img src="${p.imageUrls[0]}" style="width:100%; height:260px; object-fit:cover;">
+      <div style="padding:16px;">
+        <h2 style="font-size:1.2rem;">${p.title}</h2>
+        <div class="price" style="font-size:1.5rem;">KSh ${p.price.toLocaleString()}</div>
+        <p style="color:var(--gray-muted); margin-top:8px;"><i class="lucide icon-lucide-map-pin"></i> ${p.location}</p>
+        <p style="margin-top:16px; line-height:1.6;">${p.description}</p>
+        <div style="margin-top:24px; display:flex; gap:12px;">
+           <button class="btn-primary" style="flex:1;" onclick="showToast('Chat feature requires more DB setup.')">Chat with Owner</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('detailScreen').classList.add('active');
+  };
+  
+  window.closeDetail = () => { document.getElementById('detailScreen').classList.remove('active'); };
+  window.activateSeller = () => showToast('Seller activation coming soon.');
+  window.showMyListings = () => showToast('Listing management coming soon.');
+</script>
+
 </body>
-                                   </html>
+  </html>
