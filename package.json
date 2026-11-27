@@ -1,0 +1,29 @@
+{
+  "name": "landier",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landier — Kenyan land marketplace (Android app via Capacitor)",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node scripts/vendor.mjs && (node scripts/make-icons.mjs || echo \"icon generation skipped\")",
+    "serve": "npx --yes serve www -l 5173",
+    "android:add": "cap add android && node scripts/configure-android.mjs",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android",
+    "icons": "node scripts/make-icons.mjs && capacitor-assets generate --android",
+    "deploy:rules": "firebase deploy --only firestore --project gumado"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "lucide-static": "0.453.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0",
+    "sharp": "^0.33.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

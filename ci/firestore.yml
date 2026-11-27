@@ -1,0 +1,30 @@
+name: Deploy Firestore rules & indexes
+
+on:
+  push:
+    branches: [main]
+    paths: ["firestore.rules", "firestore.indexes.json", "firebase.json"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAS_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip (no service account)
+        if: env.HAS_SA != 'true'
+        run: echo "::warning::FIREBASE_SERVICE_ACCOUNT secret not set — paste firestore.rules into the Firebase console manually."
+      - uses: actions/setup-node@v4
+        if: env.HAS_SA == 'true'
+        with:
+          node-version: 22
+      - name: Deploy
+        if: env.HAS_SA == 'true'
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx --yes firebase-tools@latest deploy --only firestore --project gumado --non-interactive

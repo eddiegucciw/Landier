@@ -1,0 +1,13 @@
+{
+  "appId": "com.landier.app",
+  "appName": "Landier",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "auto",
+    "backgroundColor": "#F8FAFC"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
