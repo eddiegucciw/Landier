@@ -35,18 +35,7 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-
-      - name: Inject Google Maps API key
-        env:
-          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
-        run: |
-          if [ -n "$MAPS_API_KEY" ]; then
-            sed -i "s|__MAPS_API_KEY__|${MAPS_API_KEY}|" www/js/config.js
-            echo "Maps key injected."
-          else
-            echo "::warning::MAPS_API_KEY secret is not set — the map screens will show a 'not configured' message."
-          fi
-
+        
       - name: Create Android project
         env:
           VERSION_CODE: ${{ github.run_number }}
