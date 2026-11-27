@@ -1,0 +1,6 @@
+// Not used by the build.
+// actions/setup-java (`cache: gradle` in .github/workflows/android.yml) needs at least one
+// *.gradle file in the repo to compute its cache key. The real Android project (android/)
+// is generated during the build by `npx cap add android`, so this file stands in for it.
+// Bump the version below to force a fresh Gradle cache.
+// cache-version: 1
