@@ -5,14 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>LANDIER · Find Land. Make It Yours.</title>
   
-  <!-- Google Fonts & Icons -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@0.453.0/font/lucide.css">
-  
-  <!-- Custom Styles -->
   <link rel="stylesheet" href="style.css">
   
-  <!-- Main Application Logic (ES Module) -->
+  <!-- Main Application Logic -->
   <script type="module" src="app.js"></script>
 </head>
 <body>
@@ -21,67 +18,80 @@
   
   <!-- ================= AUTH SCREEN ================= -->
   <div id="authScreen" class="screen active">
-    <div class="auth-header">
-      <div class="logo-large">LANDIER</div>
-      <div class="tagline">Find Land. Make It Yours.</div>
+    <div class="auth-bg-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
     </div>
-
-    <!-- Login Form -->
-    <div id="loginForm" class="auth-form">
-      <h3>Welcome Back</h3>
-      <div class="input-group">
-        <div class="input-wrapper">
-          <i class="lucide icon-lucide-mail"></i>
-          <input type="email" id="loginEmail" placeholder="Email address">
-        </div>
+    
+    <div class="auth-content">
+      <div class="brand-logo">
+        <div class="logo-icon"><i class="lucide icon-lucide-map"></i></div>
+        <h1>LANDIER</h1>
+        <p>Find Land. Make It Yours.</p>
       </div>
-      <div class="input-group">
-        <div class="input-wrapper">
+
+      <!-- Login Form -->
+      <div id="loginForm" class="auth-card">
+        <h3>Welcome Back</h3>
+        <div class="input-field">
+          <i class="lucide icon-lucide-mail"></i>
+          <input type="email" id="loginEmail" placeholder="Email Address">
+        </div>
+        <div class="input-field">
           <i class="lucide icon-lucide-lock"></i>
           <input type="password" id="loginPassword" placeholder="Password">
-          <button class="password-toggle" onclick="togglePassword('loginPassword')"><i class="lucide icon-lucide-eye"></i></button>
+          <button class="toggle-pwd" onclick="togglePassword('loginPassword')"><i class="lucide icon-lucide-eye"></i></button>
+        </div>
+        <button class="btn-primary" id="loginBtn">Sign In <i class="lucide icon-lucide-arrow-right"></i></button>
+        <div class="auth-links">
+          <span>New here? <a onclick="showRegister()">Create Account</a></span>
+          <a onclick="showForgot()">Forgot Password?</a>
         </div>
       </div>
-      <button class="btn-primary" id="loginBtn">Sign In <i class="lucide icon-lucide-arrow-right"></i></button>
-      <div class="auth-switch">Don't have an account? <a onclick="showRegister()">Create one</a></div>
-      <div class="auth-switch"><a onclick="showForgot()">Forgot password?</a></div>
-    </div>
 
-    <!-- Register Form -->
-    <div id="registerForm" class="auth-form hidden">
-      <h3>Create Account</h3>
-      <div class="input-group">
-        <div class="input-wrapper"><i class="lucide icon-lucide-user"></i><input type="text" id="regName" placeholder="Full Name"></div>
-      </div>
-      <div class="input-group">
-        <div class="input-wrapper"><i class="lucide icon-lucide-phone"></i><input type="tel" id="regPhone" placeholder="Phone Number"></div>
-      </div>
-      <div class="input-group">
-        <div class="input-wrapper"><i class="lucide icon-lucide-mail"></i><input type="email" id="regEmail" placeholder="Email Address"></div>
-      </div>
-      <div class="input-group">
-        <div class="input-wrapper">
+      <!-- Register Form -->
+      <div id="registerForm" class="auth-card hidden">
+        <h3>Create Account</h3>
+        <div class="input-field">
+          <i class="lucide icon-lucide-user"></i>
+          <input type="text" id="regName" placeholder="Full Name">
+        </div>
+        <div class="input-field">
+          <i class="lucide icon-lucide-phone"></i>
+          <input type="tel" id="regPhone" placeholder="Phone Number">
+        </div>
+        <div class="input-field">
+          <i class="lucide icon-lucide-mail"></i>
+          <input type="email" id="regEmail" placeholder="Email Address">
+        </div>
+        <div class="input-field">
           <i class="lucide icon-lucide-lock"></i>
           <input type="password" id="regPassword" placeholder="Password">
-          <button class="password-toggle" onclick="togglePassword('regPassword')"><i class="lucide icon-lucide-eye"></i></button>
+          <button class="toggle-pwd" onclick="togglePassword('regPassword')"><i class="lucide icon-lucide-eye"></i></button>
+        </div>
+        <div class="input-field">
+          <i class="lucide icon-lucide-lock"></i>
+          <input type="password" id="regConfirmPassword" placeholder="Confirm Password">
+        </div>
+        <button class="btn-primary" id="registerBtn">Register <i class="lucide icon-lucide-user-plus"></i></button>
+        <div class="auth-links">
+          <span>Already have an account? <a onclick="showLogin()">Sign In</a></span>
         </div>
       </div>
-      <div class="input-group">
-        <div class="input-wrapper"><i class="lucide icon-lucide-lock"></i><input type="password" id="regConfirmPassword" placeholder="Confirm Password"></div>
-      </div>
-      <button class="btn-primary" id="registerBtn">Register <i class="lucide icon-lucide-user-plus"></i></button>
-      <div class="auth-switch">Already have an account? <a onclick="showLogin()">Sign In</a></div>
-    </div>
 
-    <!-- Forgot Password Form -->
-    <div id="forgotForm" class="auth-form hidden">
-      <h3>Reset Password</h3>
-      <p style="font-size:0.85rem; color:var(--gray-muted); margin-bottom:12px;">Enter your email and we'll send you a link to reset your password.</p>
-      <div class="input-group">
-        <div class="input-wrapper"><i class="lucide icon-lucide-mail"></i><input type="email" id="resetEmail" placeholder="Email Address"></div>
+      <!-- Forgot Password Form -->
+      <div id="forgotForm" class="auth-card hidden">
+        <h3>Reset Password</h3>
+        <p class="sub-text">Enter your email and we'll send you a reset link.</p>
+        <div class="input-field">
+          <i class="lucide icon-lucide-mail"></i>
+          <input type="email" id="resetEmail" placeholder="Email Address">
+        </div>
+        <button class="btn-primary" id="resetBtn">Send Link <i class="lucide icon-lucide-send"></i></button>
+        <div class="auth-links">
+          <a onclick="showLogin()"><i class="lucide icon-lucide-arrow-left"></i> Back to Login</a>
+        </div>
       </div>
-      <button class="btn-primary" id="resetBtn">Send Reset Link <i class="lucide icon-lucide-send"></i></button>
-      <div class="auth-switch"><a onclick="showLogin()"><i class="lucide icon-lucide-arrow-left"></i> Back to Login</a></div>
     </div>
   </div>
 
@@ -89,9 +99,9 @@
   <div id="mainApp" class="screen" style="display:none;">
     
     <!-- HOME SCREEN -->
-    <div id="homeScreen" class="screen active" style="padding-bottom: 80px;">
-      <header class="home-header">
-        <div class="welcome-text">
+    <div id="homeScreen" class="screen active" style="padding-bottom: 90px;">
+      <header class="app-header">
+        <div class="header-text">
           <h1>Welcome to LANDIER</h1>
           <p>Discover verified land across Kenya</p>
         </div>
@@ -99,47 +109,47 @@
           <button class="icon-btn" onclick="switchTab('saved')"><i class="lucide icon-lucide-heart"></i></button>
           <button class="icon-btn" onclick="switchTab('messages')">
             <i class="lucide icon-lucide-bell"></i>
-            <span class="dot"></span>
+            <span class="notification-dot"></span>
           </button>
         </div>
       </header>
 
-      <div class="search-container">
-        <div class="search-bar">
+      <div class="search-section">
+        <div class="search-box">
           <i class="lucide icon-lucide-search"></i>
           <input type="text" id="searchInput" placeholder="Search land, location, town..." oninput="triggerSearch()">
-          <button class="filter-btn" onclick="showToast('Filter coming soon')"><i class="lucide icon-lucide-sliders"></i></button>
+          <button class="filter-action" onclick="showToast('Filters coming soon')"><i class="lucide icon-lucide-sliders-horizontal"></i></button>
         </div>
       </div>
 
-      <div class="categories-scroll" id="categoryFilters">
-        <button class="cat-chip active" data-cat="All" onclick="setCategory('All', this)">All Land</button>
-        <button class="cat-chip" data-cat="Residential" onclick="setCategory('Residential', this)">Residential</button>
-        <button class="cat-chip" data-cat="Commercial" onclick="setCategory('Commercial', this)">Commercial</button>
-        <button class="cat-chip" data-cat="Agricultural" onclick="setCategory('Agricultural', this)">Agricultural</button>
-        <button class="cat-chip" data-cat="Industrial" onclick="setCategory('Industrial', this)">Industrial</button>
+      <div class="category-scroll" id="categoryFilters">
+        <button class="category-chip active" data-cat="All" onclick="setCategory('All', this)">All Land</button>
+        <button class="category-chip" data-cat="Residential" onclick="setCategory('Residential', this)">Residential</button>
+        <button class="category-chip" data-cat="Commercial" onclick="setCategory('Commercial', this)">Commercial</button>
+        <button class="category-chip" data-cat="Agricultural" onclick="setCategory('Agricultural', this)">Agricultural</button>
+        <button class="category-chip" data-cat="Industrial" onclick="setCategory('Industrial', this)">Industrial</button>
       </div>
 
-      <div class="section-header">
+      <div class="content-header">
         <h2>Featured Land</h2>
         <span onclick="showToast('Showing all properties')">See All</span>
       </div>
 
       <div id="propertyGrid" class="property-grid">
         <!-- Skeletons while loading -->
-        <div class="property-card skeleton"></div>
-        <div class="property-card skeleton"></div>
-        <div class="property-card skeleton"></div>
-        <div class="property-card skeleton"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
       </div>
     </div>
 
     <!-- EXPLORE SCREEN -->
     <div id="exploreScreen" class="screen">
-      <div class="map-view">
+      <div class="map-wrapper">
         <div id="mapContainer" style="width: 100%; height: 100%;"></div>
-        <div class="map-overlay">
-          <div class="search-bar shadow-md">
+        <div class="map-search-overlay">
+          <div class="search-box shadow-lg">
             <i class="lucide icon-lucide-map-pin"></i>
             <input type="text" placeholder="Search an area...">
           </div>
@@ -173,52 +183,70 @@
         <h2>My Account</h2>
       </header>
       
-      <div class="account-profile">
-        <img src="https://ui-avatars.com/api/?name=User&background=1e7e34&color=fff&size=128" class="avatar-large" id="accountAvatar">
-        <div class="account-info">
-          <h3 id="accountName">Loading...</h3>
-          <p id="accountEmail">...</p>
-          <span class="badge" id="accountRole">Buyer</span>
+      <div class="account-card">
+        <div class="profile-header">
+          <img src="https://ui-avatars.com/api/?name=User&background=10B981&color=fff&size=128" class="profile-avatar" id="accountAvatar">
+          <div class="profile-details">
+            <h3 id="accountName">Loading...</h3>
+            <p id="accountEmail">...</p>
+            <span class="role-badge" id="accountRole">Verified Buyer</span>
+          </div>
         </div>
       </div>
 
-      <div class="account-menu">
-        <button class="menu-item" onclick="openAddProperty()"><i class="lucide icon-lucide-plus-circle"></i> List New Land</button>
-        <button class="menu-item" onclick="switchTab('saved')"><i class="lucide icon-lucide-heart"></i> Saved Properties</button>
-        <button class="menu-item" onclick="showToast('Settings coming soon')"><i class="lucide icon-lucide-settings"></i> Settings</button>
-        <button class="menu-item logout" onclick="logout()"><i class="lucide icon-lucide-log-out"></i> Logout</button>
+      <div class="account-actions">
+        <button class="action-btn" onclick="openAddProperty()">
+          <div class="btn-icon bg-green"><i class="lucide icon-lucide-plus-circle"></i></div>
+          <span>List New Land</span>
+          <i class="lucide icon-lucide-chevron-right"></i>
+        </button>
+        <button class="action-btn" onclick="switchTab('saved')">
+          <div class="btn-icon bg-blue"><i class="lucide icon-lucide-heart"></i></div>
+          <span>Saved Properties</span>
+          <i class="lucide icon-lucide-chevron-right"></i>
+        </button>
+        <button class="action-btn" onclick="showToast('Settings coming soon')">
+          <div class="btn-icon bg-gray"><i class="lucide icon-lucide-settings"></i></div>
+          <span>Settings</span>
+          <i class="lucide icon-lucide-chevron-right"></i>
+        </button>
+        <button class="action-btn logout-btn" onclick="logout()">
+          <div class="btn-icon bg-red"><i class="lucide icon-lucide-log-out"></i></div>
+          <span>Logout</span>
+          <i class="lucide icon-lucide-chevron-right"></i>
+        </button>
       </div>
     </div>
 
     <!-- PROPERTY DETAIL OVERLAY -->
-    <div id="detailScreen" class="overlay-screen">
-      <div class="overlay-header">
+    <div id="detailScreen" class="overlay-view">
+      <div class="overlay-topbar">
         <button class="icon-btn" onclick="closeDetail()"><i class="lucide icon-lucide-arrow-left"></i></button>
-        <h3>Details</h3>
+        <h3>Property Details</h3>
       </div>
-      <div id="detailContent" class="detail-content"></div>
+      <div id="detailContent" class="overlay-scroll"></div>
     </div>
 
     <!-- ADD PROPERTY OVERLAY -->
-    <div id="addPropertyScreen" class="overlay-screen">
-      <div class="overlay-header">
+    <div id="addPropertyScreen" class="overlay-view">
+      <div class="overlay-topbar">
         <button class="icon-btn" onclick="closeAddProperty()"><i class="lucide icon-lucide-arrow-left"></i></button>
         <h3>List New Land</h3>
       </div>
-      <div class="add-property-form">
-        <div class="input-group">
+      <div class="overlay-scroll form-container">
+        <div class="form-group">
           <label>Property Title</label>
           <input type="text" id="addTitle" placeholder="e.g. Prime Plot in Ruiru">
         </div>
-        <div class="input-group">
+        <div class="form-group">
           <label>Price (KSh)</label>
           <input type="number" id="addPrice" placeholder="e.g. 1500000">
         </div>
-        <div class="input-group">
+        <div class="form-group">
           <label>Location</label>
           <input type="text" id="addLocation" placeholder="e.g. Ruiru, Kiambu">
         </div>
-        <div class="input-group">
+        <div class="form-group">
           <label>Category</label>
           <select id="addCategory">
             <option value="Residential">Residential</option>
@@ -227,20 +255,23 @@
             <option value="Industrial">Industrial</option>
           </select>
         </div>
-        <div class="input-group">
+        <div class="form-group">
           <label>Size</label>
           <input type="text" id="addSize" placeholder="e.g. 50 x 100 ft">
         </div>
-        <div class="input-group">
+        <div class="form-group">
           <label>Description</label>
           <textarea id="addDescription" rows="4" placeholder="Describe the land..."></textarea>
         </div>
-        <div class="input-group">
+        <div class="form-group">
           <label>Upload Cover Photo</label>
-          <input type="file" id="addImageFile" accept="image/*" class="file-input">
-          <div id="imagePreview"></div>
+          <div class="file-upload-box">
+            <input type="file" id="addImageFile" accept="image/*">
+            <div class="file-msg"><i class="lucide icon-lucide-camera"></i> Tap to upload photo</div>
+          </div>
+          <div id="imagePreview" class="preview-container"></div>
         </div>
-        <button class="btn-primary" id="publishBtn" style="margin-top:16px;">Publish Listing <i class="lucide icon-lucide-check"></i></button>
+        <button class="btn-primary" id="publishBtn" style="margin-top:24px;">Publish Listing <i class="lucide icon-lucide-check"></i></button>
       </div>
     </div>
 
@@ -249,19 +280,24 @@
   <!-- ================= BOTTOM NAV ================= -->
   <nav id="bottomNav" class="bottom-nav" style="display:none;">
     <button class="nav-item active" data-nav="home" onclick="switchTab('home')">
-      <i class="lucide icon-lucide-home"></i><span>Home</span>
+      <div class="nav-icon"><i class="lucide icon-lucide-home"></i></div>
+      <span>Home</span>
     </button>
     <button class="nav-item" data-nav="explore" onclick="switchTab('explore')">
-      <i class="lucide icon-lucide-map"></i><span>Explore</span>
+      <div class="nav-icon"><i class="lucide icon-lucide-map"></i></div>
+      <span>Explore</span>
     </button>
     <button class="nav-item" data-nav="saved" onclick="switchTab('saved')">
-      <i class="lucide icon-lucide-heart"></i><span>Saved</span>
+      <div class="nav-icon"><i class="lucide icon-lucide-heart"></i></div>
+      <span>Saved</span>
     </button>
     <button class="nav-item" data-nav="messages" onclick="switchTab('messages')">
-      <i class="lucide icon-lucide-message-circle"></i><span>Messages</span>
+      <div class="nav-icon"><i class="lucide icon-lucide-message-circle"></i></div>
+      <span>Messages</span>
     </button>
     <button class="nav-item" data-nav="account" onclick="switchTab('account')">
-      <i class="lucide icon-lucide-user"></i><span>Account</span>
+      <div class="nav-icon"><i class="lucide icon-lucide-user"></i></div>
+      <span>Account</span>
     </button>
   </nav>
 
@@ -283,12 +319,11 @@
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.querySelector(`.nav-item[data-nav="${tab}"]`).classList.add('active');
     
-    // Initialize map when Explore tab is opened
     if (tab === 'explore' && window.initMap) window.initMap();
   };
 
   window.setCategory = (cat, el) => {
-    document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     if (window.filterByCategory) window.filterByCategory(cat);
   };
