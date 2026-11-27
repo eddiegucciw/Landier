@@ -1,1 +1,195 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LANDIER · Find Land. Make It Yours.</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Google Maps API (You MUST replace YOUR_GOOGLE_MAPS_API_KEY here) -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
+  
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- ================= AUTH SCREEN ================= -->
+    <div id="authScreen" class="screen active">
+      <div class="logo-container">
+        <h1 class="logo">LANDIER</h1>
+        <p class="tagline">Find Land. Make It Yours.</p>
+      </div>
+      
+      <!-- Login -->
+      <div id="loginForm" class="auth-form">
+        <h2>Sign In</h2>
+        <div class="input-group"><input type="email" id="loginEmail" placeholder="Email" required></div>
+        <div class="input-group"><input type="password" id="loginPassword" placeholder="Password" required></div>
+        <button id="loginBtn" class="btn-primary">Sign In</button>
+        <p class="auth-switch">No account? <a href="#" id="showRegister">Register</a></p>
+        <p class="auth-switch"><a href="#" id="showForgot">Forgot password?</a></p>
+      </div>
+
+      <!-- Register -->
+      <div id="registerForm" class="auth-form hidden">
+        <h2>Create Account</h2>
+        <div class="input-group"><input type="text" id="regName" placeholder="Full Name" required></div>
+        <div class="input-group"><input type="email" id="regEmail" placeholder="Email" required></div>
+        <div class="input-group"><input type="tel" id="regPhone" placeholder="Phone Number" required></div>
+        <div class="input-group"><input type="password" id="regPassword" placeholder="Password" required></div>
+        <div class="input-group"><input type="password" id="regConfirm" placeholder="Confirm Password" required></div>
+        <button id="registerBtn" class="btn-primary">Register</button>
+        <p class="auth-switch">Already have an account? <a href="#" id="showLogin">Sign In</a></p>
+      </div>
+
+      <!-- Forgot Password -->
+      <div id="forgotForm" class="auth-form hidden">
+        <h2>Reset Password</h2>
+        <div class="input-group"><input type="email" id="resetEmail" placeholder="Email" required></div>
+        <button id="resetBtn" class="btn-primary">Send Reset Link</button>
+        <p class="auth-switch"><a href="#" id="backToLogin">Back to Login</a></p>
+      </div>
+    </div>
+
+    <!-- ================= MAIN APP ================= -->
+    <div id="mainApp" class="screen hidden">
+      
+      <header class="home-header">
+        <div>
+          <h1>Welcome to LANDIER</h1>
+          <p>Find Land. Make It Yours.</p>
+        </div>
+        <div class="header-actions">
+          <button id="notificationBtn" class="icon-btn">🔔</button>
+          <button class="icon-btn" onclick="document.querySelector('[data-tab=saved]').click()">❤️</button>
+        </div>
+      </header>
+
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search land by location, title...">
+        <button id="searchBtn" class="btn-icon">🔍</button>
+      </div>
+
+      <div class="categories">
+        <button class="category-btn active" data-cat="All">All</button>
+        <button class="category-btn" data-cat="Residential">Residential</button>
+        <button class="category-btn" data-cat="Commercial">Commercial</button>
+        <button class="category-btn" data-cat="Agricultural">Agricultural</button>
+        <button class="category-btn" data-cat="Industrial">Industrial</button>
+      </div>
+
+      <!-- Home Screen -->
+      <div id="homeScreen" class="screen active">
+        <div class="section-title"><h2>Featured Land</h2></div>
+        <div id="featuredGrid" class="property-grid"><p class="empty-state">Loading listings...</p></div>
+        <div class="section-title"><h2>Recently Added</h2></div>
+        <div id="recentGrid" class="property-grid"></div>
+      </div>
+
+      <!-- Explore Screen -->
+      <div id="exploreScreen" class="screen">
+        <h2>Explore Land on Map</h2>
+        <div id="mapContainer" style="height: 60vh; width: 100%; border-radius: 12px; margin-top: 12px; background: #e2e8f0;"></div>
+        <div id="mapFallback" class="map-fallback hidden">
+          <p>⚠️ Google Maps API key missing or invalid. Please configure it in <code>index.html</code>.</p>
+        </div>
+      </div>
+
+      <!-- Saved Screen -->
+      <div id="savedScreen" class="screen">
+        <h2>Saved Land</h2>
+        <div id="savedGrid" class="property-grid"><p class="empty-state">No saved land yet.</p></div>
+      </div>
+
+      <!-- Messages Screen -->
+      <div id="messagesScreen" class="screen">
+        <h2>Messages</h2>
+        <div id="conversationList" class="conversation-list">
+          <p class="empty-state">No messages yet. Start a chat from a listing.</p>
+        </div>
+      </div>
+
+      <!-- Account Screen -->
+      <div id="accountScreen" class="screen">
+        <h2>My Account</h2>
+        <div id="profileInfo" class="profile-card">Loading profile...</div>
+        <div class="account-actions">
+          <button id="activateSellerBtn" class="btn-primary">Activate Seller Account</button>
+          <button id="sellerDashboardBtn" class="btn-secondary hidden">Seller Dashboard</button>
+          <button id="logoutBtn" class="btn-secondary" style="color: #dc2626; border-color: #fca5a5;">Logout</button>
+        </div>
+      </div>
+
+      <!-- Bottom Navigation -->
+      <nav class="bottom-nav">
+        <button class="nav-item active" data-tab="home">🏠 Home</button>
+        <button class="nav-item" data-tab="explore">🗺️ Explore</button>
+        <button class="nav-item" data-tab="saved">❤️ Saved</button>
+        <button class="nav-item" data-tab="messages">💬 Messages</button>
+        <button class="nav-item" data-tab="account">👤 Account</button>
+      </nav>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+    <!-- Seller Dashboard Modal -->
+    <div id="sellerModal" class="modal hidden">
+      <div class="modal-content">
+        <h2>Seller Dashboard</h2>
+        <button id="addLandBtn" class="btn-primary" style="margin-bottom: 16px;">+ Add New Land</button>
+        <div id="myListings"></div>
+        <button id="closeSellerModal" class="btn-secondary" style="margin-top: 16px; width: 100%;">Close</button>
+      </div>
+    </div>
+
+    <!-- Add Land Modal -->
+    <div id="addLandModal" class="modal hidden">
+      <div class="modal-content">
+        <h2>Add Land Listing</h2>
+        
+        <div id="step1" class="step active">
+          <h3>Step 1: Land Information</h3>
+          <input type="text" id="landTitle" placeholder="Land Title (e.g. Prime Plot in Ruiru)">
+          <input type="number" id="landPrice" placeholder="Price (KSh)">
+          <input type="text" id="landSize" placeholder="Size (e.g. 50 x 100 ft)">
+          <select id="landCategory">
+            <option value="Residential">Residential</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Agricultural">Agricultural</option>
+            <option value="Industrial">Industrial</option>
+          </select>
+          <input type="text" id="landCounty" placeholder="County (e.g. Kiambu)">
+          <input type="text" id="landTown" placeholder="Town (e.g. Ruiru)">
+          <textarea id="landDescription" placeholder="Detailed Description"></textarea>
+          <button id="nextStep2" class="btn-primary">Next Step</button>
+        </div>
+
+        <div id="step2" class="step hidden">
+          <h3>Step 2: Photographs</h3>
+          <input type="file" id="landImages" accept="image/*" multiple>
+          <div id="imagePreview" style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;"></div>
+          <button id="nextStep3" class="btn-primary" style="margin-top: 16px;">Next Step</button>
+        </div>
+
+        <div id="step3" class="step hidden">
+          <h3>Step 3: Location</h3>
+          <div id="locationMap" style="height: 250px; background: #e2e8f0; border-radius: 8px; margin-bottom: 12px;"></div>
+          <input type="text" id="mapSearch" placeholder="Search location to center map...">
+          <button id="searchMapBtn" class="btn-secondary" style="margin-top: 8px;">Search</button>
+          <p style="margin-top: 12px; font-size: 0.9rem;">Selected Coordinates: <span id="selectedCoords" style="font-weight: bold; color: var(--green);">None</span></p>
+          <button id="nextStep4" class="btn-primary" style="margin-top: 16px;">Next Step</button>
+        </div>
+
+        <div id="step4" class="step hidden">
+          <h3>Step 4: Publish</h3>
+          <p style="margin-bottom: 16px; font-size: 0.9rem; color: var(--gray-muted);">By clicking publish, your listing will be submitted for moderation. It will appear publicly once approved.</p>
+          <button id="publishLandBtn" class="btn-primary">Publish Land</button>
+        </div>
+        
+        <button id="closeAddLand" class="btn-secondary" style="margin-top: 16px; width: 100%;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</body>
+                                   </html>
