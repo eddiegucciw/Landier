@@ -1,0 +1,142 @@
+rules_version = '2';
+
+// Landier — Firestore security rules.
+// Admins: create a document at /admins/{uid} (any content) in the Firebase console.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isMe(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // ---------- Admin markers ----------
+    match /admins/{uid} {
+      allow get: if isMe(uid);
+      allow list, write: if false;
+    }
+
+    // ---------- User profiles (private) ----------
+    function validProfile(d) {
+      return d.keys().hasOnly(['fullName', 'email', 'phone', 'createdAt', 'updatedAt'])
+        && str(d.fullName, 1, 80)
+        && (!('phone' in d) || (d.phone is string && d.phone.matches('^(254[17][0-9]{8})?$')))
+        && (!('email' in d) || d.email is string);
+    }
+    match /users/{uid} {
+      allow read: if isMe(uid) || isAdmin();
+      allow create, update: if isMe(uid) && validProfile(request.resource.data);
+      allow delete: if isMe(uid);
+
+      match /saved/{listingId} {
+        allow read, delete: if isMe(uid);
+        allow create, update: if isMe(uid) && request.resource.data.keys().hasOnly(['savedAt']);
+      }
+    }
+
+    // ---------- Listings ----------
+    function validListing(d) {
+      return d.keys().hasOnly([
+          'sellerId', 'sellerName', 'sellerPhone', 'title', 'price', 'size', 'landUse', 'titleStatus',
+          'county', 'town', 'location', 'description', 'latitude', 'longitude', 'coverThumb',
+          'imageCount', 'status', 'rejectionReason', 'createdAt', 'updatedAt', 'moderatedBy', 'moderatedAt'])
+        && str(d.title, 5, 120)
+        && d.price is number && d.price >= 1000 && d.price <= 100000000000
+        && str(d.size, 1, 60)
+        && d.landUse in ['Residential', 'Commercial', 'Agricultural', 'Industrial', 'Mixed Use']
+        && str(d.county, 2, 40) && str(d.town, 2, 80)
+        && str(d.description, 20, 5000)
+        && d.latitude is number && d.latitude >= -5.5 && d.latitude <= 6
+        && d.longitude is number && d.longitude >= 33 && d.longitude <= 42.5
+        && str(d.coverThumb, 30, 250000) && d.coverThumb.matches('^data:image/jpeg;base64,.*')
+        && d.imageCount is int && d.imageCount >= 1 && d.imageCount <= 6
+        && d.status in ['pending', 'approved', 'rejected', 'sold'];
+    }
+    function isPublic(d) { return d.status in ['approved', 'sold']; }
+
+    match /landListings/{id} {
+      allow read: if isPublic(resource.data)
+        || (signedIn() && resource.data.sellerId == request.auth.uid)
+        || isAdmin();
+
+      // New listings start as pending (admins may publish directly). Email must be verified.
+      allow create: if verified()
+        && request.resource.data.sellerId == request.auth.uid
+        && validListing(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && (request.resource.data.status == 'pending' || isAdmin());
+
+      allow update: if isAdmin() && validListing(request.resource.data)
+        || (signedIn() && resource.data.sellerId == request.auth.uid
+            && request.resource.data.sellerId == resource.data.sellerId
+            && request.resource.data.createdAt == resource.data.createdAt
+            && validListing(request.resource.data)
+            && (
+              // edits & relisting go back to review; approved land can be marked sold
+              request.resource.data.status == 'pending'
+              || (request.resource.data.status == 'sold' && resource.data.status in ['approved', 'sold'])
+              // contact details sync without changing anything else
+              || (changed().hasOnly(['sellerName', 'sellerPhone', 'updatedAt']))
+            )
+            // owners can't hand-edit moderation fields
+            && !changed().hasAny(['moderatedBy', 'moderatedAt']));
+
+      allow delete: if isAdmin() || (signedIn() && resource.data.sellerId == request.auth.uid);
+
+      match /images/{imageId} {
+        function parent() { return get(/databases/$(database)/documents/landListings/$(id)).data; }
+        allow read: if isPublic(parent()) || (signedIn() && parent().sellerId == request.auth.uid) || isAdmin();
+        allow create, update: if signedIn() && parent().sellerId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['data', 'order'])
+          && request.resource.data.data is string
+          && request.resource.data.data.size() < 1000000
+          && request.resource.data.data.matches('^data:image/jpeg;base64,.*')
+          && request.resource.data.order is int && request.resource.data.order >= 0 && request.resource.data.order < 6;
+        allow delete: if isAdmin() || (signedIn() && parent().sellerId == request.auth.uid);
+      }
+    }
+
+    // ---------- Conversations ----------
+    function isParticipant(d) { return signedIn() && request.auth.uid in d.participants; }
+
+    match /conversations/{convId} {
+      // `resource == null` lets a buyer check whether a chat already exists.
+      allow get: if signedIn() && (resource == null || isParticipant(resource.data) || isAdmin());
+      allow list: if signedIn() && (isParticipant(resource.data) || isAdmin());
+
+      allow create: if signedIn()
+        && request.resource.data.buyerId == request.auth.uid
+        && convId == request.resource.data.listingId + '_' + request.auth.uid
+        && request.resource.data.participants == [request.auth.uid, request.resource.data.sellerId]
+        && request.resource.data.sellerId != request.auth.uid
+        && request.resource.data.sellerId == get(/databases/$(database)/documents/landListings/$(request.resource.data.listingId)).data.sellerId
+        && request.resource.data.keys().hasOnly([
+            'participants', 'buyerId', 'sellerId', 'listingId', 'listingTitle', 'listingThumb',
+            'buyerName', 'sellerName', 'lastMessage', 'lastSenderId', 'lastAt', 'createdAt', 'lastRead'])
+        && str(request.resource.data.listingTitle, 1, 120)
+        && request.resource.data.listingThumb is string && request.resource.data.listingThumb.size() < 250000;
+
+      allow update: if isParticipant(resource.data)
+        && changed().hasOnly(['lastMessage', 'lastSenderId', 'lastAt', 'lastRead'])
+        && (!('lastSenderId' in changed()) || request.resource.data.lastSenderId == request.auth.uid)
+        && request.resource.data.lastMessage is string && request.resource.data.lastMessage.size() <= 200;
+
+      allow delete: if false;
+
+      match /messages/{msgId} {
+        function conv() { return get(/databases/$(database)/documents/conversations/$(convId)).data; }
+        allow read: if signedIn() && (request.auth.uid in conv().participants || isAdmin());
+        allow create: if signedIn() && request.auth.uid in conv().participants
+          && request.resource.data.keys().hasOnly(['senderId', 'text', 'createdAt'])
+          && request.resource.data.senderId == request.auth.uid
+          && str(request.resource.data.text, 1, 2000)
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+  }
+}
