@@ -106,8 +106,13 @@ function pricePin(text, active = false) {
   });
 }
 
-function dropPin() {
-  return L.divIcon({ className: "", html: '<div class="drop-pin"></div>', iconSize: [30, 42], iconAnchor: [15, 42] });
+function dropPin(kind = "") {
+  return L.divIcon({ className: "", html: `<div class="drop-pin ${kind}"></div>`, iconSize: [30, 42], iconAnchor: [15, 42], tooltipAnchor: [0, -40] });
+}
+
+function shortLabel(label) {
+  // "Kitengela, Kajiado County, Kenya" -> "Kitengela, Kajiado County"
+  return String(label || "").split(",").slice(0, 2).join(",").trim();
 }
 
 // Leaflet measures its container once; overlays slide in, so re-measure after the animation.
@@ -151,6 +156,7 @@ let exploreMap = null;
 let markerLayer = null;
 let markers = [];
 let userDot = null;
+let searchMarker = null;
 let activeMarker = null;
 let pendingFit = true;
 let exploreReady = false;
@@ -259,6 +265,15 @@ async function searchExplore(q) {
   if (!q || !exploreMap) return;
   const res = await geocode(q);
   if (res) {
+    const pos = [res.location.lat, res.location.lng];
+    if (!searchMarker) {
+      searchMarker = L.marker(pos, { icon: dropPin("search"), zIndexOffset: 500, keyboard: false });
+      searchMarker.on("click", () => { exploreMap.removeLayer(searchMarker); });
+    } else searchMarker.setLatLng(pos);
+    searchMarker.unbindTooltip();
+    searchMarker.bindTooltip(esc(shortLabel(res.label) || q), { permanent: true, direction: "top", className: "search-label" });
+    searchMarker.addTo(exploreMap);
+    searchMarker.openTooltip();
     exploreMap.fitBounds(res.bounds, { maxZoom: 15 });
     return;
   }
@@ -330,8 +345,9 @@ export async function createPicker(el, initial, onChange) {
       if (!map) throw new Error("Map isn't available.");
       const r = await geocode(q);
       if (!r) throw new Error(`Couldn't find "${q}"`);
-      map.fitBounds(r.bounds, { maxZoom: 16 });
-      toast("Now tap the exact spot of the land", "info");
+      map.fitBounds(r.bounds, { maxZoom: 17 });
+      set(r.location);
+      toast(`Pin placed at ${shortLabel(r.label) || q} — drag it to the exact spot`, "success");
     }
   };
 }

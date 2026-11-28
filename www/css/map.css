@@ -25,3 +25,7 @@
 .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background: var(--brand) !important; color: #fff; font-weight: 700; font-family: var(--font); }
 [data-theme="dark"] .leaflet-control-layers, [data-theme="dark"] .leaflet-bar a, [data-theme="dark"] .leaflet-control-attribution { background: var(--surface); color: var(--text); }
 [data-theme="dark"] .leaflet-control-attribution a { color: var(--brand); }
+
+/* Search result pin + its label */
+.drop-pin.search { background: var(--info); }
+.leaflet-tooltip.search-label { font: 600 12px/1.3 var(--font); padding: 5px 9px; border-radius: 8px; border: 0; box-shadow: 0 2px 8px rgba(0,0,0,.25); max-width: 220px; white-space: normal; }
