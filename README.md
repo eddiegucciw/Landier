@@ -38,9 +38,11 @@ Push a tag like `v1.0.0` to also publish the files as a GitHub Release.
    indexes in `firestore.indexes.json`, **or** add the `FIREBASE_SERVICE_ACCOUNT` secret (below) and
    run the *Deploy Firestore rules & indexes* workflow. The app still works before the indexes finish
    building; it just sorts on the device.
-4. **Make yourself an admin:** in Firestore create a document `admins/<your-user-UID>` (any field,
-   e.g. `role: "admin"`). Find your UID under *Authentication → Users*. Admins see
-   *Account → Admin · Moderation* and their own listings go live immediately.
+4. **Make yourself an admin:** sign up in the app, then in *Firestore → Data* open
+   `users → <your user ID>` and add the field `role` (string) = `admin`. The app picks it up within
+   seconds, no restart needed. (Tap the **ID** pill on the Account tab to see and copy your user ID.)
+   Admins see *Account → Admin · Moderation* and their own listings go live immediately.
+   To remove admin access, delete the `role` field. Users can't set their own role from the app.
 
 Photos are stored inside Firestore (compressed, one document per photo), so Firebase Storage and the
 Blaze plan are **not** required.
