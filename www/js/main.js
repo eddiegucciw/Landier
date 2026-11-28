@@ -9,6 +9,8 @@ import { initSeller, fetchMyListings, myListings } from "./seller.js";
 import { initChat, subscribeConversations, stopChat } from "./chat.js";
 import { initAdmin, refreshPendingCount } from "./admin.js";
 import { initSettings } from "./settings.js";
+import { initAvatar } from "./avatar.js";
+import { getProfile, savePublicProfile, isSafePhotoURL } from "./profiles.js";
 
 function show(id) {
   ["splash", "authScreen", "mainApp"].forEach((x) => ($("#" + x).hidden = x !== id));
@@ -18,7 +20,17 @@ function greetingText() {
   const h = new Date().getHours();
   const first = (state.profile?.fullName || "").split(" ")[0];
   const g = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-  return first ? `${g}, ${first}` : "Karibu Landier";
+  return first ? `${g}, ${first} · discover verified land across Kenya` : "Discover verified land across Kenya";
+}
+
+function renderAvatars(p, u) {
+  const photo = isSafePhotoURL(p.photoURL) ? p.photoURL : "";
+  const acc = $("#accountAvatar");
+  acc.classList.toggle("has-photo", !!photo);
+  acc.innerHTML = photo ? `<img src="${esc(photo)}" alt="Profile photo">` : esc(initials(p.fullName || u.email));
+  const nav = $("#navAvatar");
+  nav.classList.toggle("has-photo", !!photo);
+  nav.innerHTML = photo ? `<img src="${esc(photo)}" alt="">` : `<i class="icon-user"></i>`;
 }
 
 function renderAccount() {
@@ -26,7 +38,7 @@ function renderAccount() {
   const u = auth.currentUser;
   if (!u) return;
   $("#greeting").textContent = greetingText();
-  $("#accountAvatar").textContent = initials(p.fullName || u.email);
+  renderAvatars(p, u);
   $("#accountName").textContent = p.fullName || u.email.split("@")[0];
   $("#accountEmail").textContent = u.email;
   $("#accountBadges").innerHTML = [
@@ -60,8 +72,18 @@ registerActions({
   }
 });
 
+// Keep the public profile card (name + photo shown to other users) in sync with the private profile.
+async function syncPublicProfile(uid) {
+  const p = state.profile || {};
+  const pub = await getProfile(uid);
+  if (!pub || pub.fullName !== p.fullName || (pub.photoURL || "") !== (p.photoURL || "")) {
+    try { await savePublicProfile(uid, { fullName: p.fullName, photoURL: p.photoURL }); } catch (e) { console.warn("public profile", e); }
+  }
+}
+
 function onSignedIn(user) {
   show("mainApp");
+  syncPublicProfile(user.uid);
   switchTab("home");
   renderAccount();
   loadListings(true);
@@ -86,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initChat();
   initAdmin();
   initSettings();
+  initAvatar();
   initAuth({ onSignedIn, onSignedOut });
 
   ["profile-updated", "saved-changed", "my-listings-changed"].forEach((ev) => document.addEventListener(ev, renderAccount));
