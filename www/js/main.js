@@ -33,7 +33,8 @@ function renderAccount() {
     u.emailVerified ? `<span class="pill"><i class="icon-badge-check"></i> Verified</span>` : `<span class="pill warn">Email not verified</span>`,
     state.isAdmin ? `<span class="pill info"><i class="icon-shield-check"></i> Admin</span>` : "",
     p.phone ? "" : `<span class="pill warn">Add phone in Settings</span>`,
-    state.adminCheckError === "permission-denied" ? `<span class="pill danger">Firestore rules not published</span>` : "",
+    state.adminCheckError === "permission-denied" ? `<span class="pill danger">Firestore rules not published</span>`
+      : state.adminCheckError ? `<span class="pill danger">Admin check failed: ${esc(state.adminCheckError)}</span>` : "",
     `<button class="pill gray" data-action="copyUid" title="Copy your user ID"><i class="icon-copy"></i> ID: ${esc(u.uid.slice(0, 8))}…</button>`
   ].join("");
   $("#verifyBanner").hidden = u.emailVerified;
@@ -47,11 +48,19 @@ function renderAccount() {
 }
 
 registerActions({
+  // Copies the UID and shows exactly what the admin check sees, to debug admin setup.
   copyUid: async () => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
-    try { await navigator.clipboard.writeText(uid); toast("User ID copied", "success"); }
-    catch (_) { alertDialog("Your user ID", uid); }
+    try { await navigator.clipboard.writeText(uid); } catch (_) {}
+    state.isAdmin = await checkAdmin(uid);
+    renderAccount();
+    const result = state.isAdmin
+      ? "FOUND - you are an admin."
+      : state.adminCheckError
+        ? `ERROR: ${state.adminCheckError}`
+        : `NOT FOUND - Firestore has no document at admins/${uid}`;
+    alertDialog("Your user ID (copied)", `${uid}\n\nLength: ${uid.length} characters\nProject: ${auth.app?.options?.projectId || "?"}\nAdmin check: ${result}`);
   }
 });
 
