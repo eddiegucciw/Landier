@@ -1,8 +1,8 @@
 // main.js — app bootstrap: wires modules together and handles sign-in / sign-out.
 import { auth } from "./firebase.js";
 import { state, resetState } from "./state.js";
-import { $, esc, initials, switchTab, closeAllOverlays, onTabShow, toast } from "./ui.js";
-import { initAuth } from "./auth.js";
+import { $, esc, initials, switchTab, closeAllOverlays, onTabShow, toast, registerActions, alertDialog } from "./ui.js";
+import { initAuth, checkAdmin } from "./auth.js";
 import { initListings, loadListings, subscribeSaved, renderHome } from "./listings.js";
 import { initMap } from "./map.js";
 import { initSeller, fetchMyListings, myListings } from "./seller.js";
@@ -32,7 +32,9 @@ function renderAccount() {
   $("#accountBadges").innerHTML = [
     u.emailVerified ? `<span class="pill"><i class="icon-badge-check"></i> Verified</span>` : `<span class="pill warn">Email not verified</span>`,
     state.isAdmin ? `<span class="pill info"><i class="icon-shield-check"></i> Admin</span>` : "",
-    p.phone ? "" : `<span class="pill warn">Add phone in Settings</span>`
+    p.phone ? "" : `<span class="pill warn">Add phone in Settings</span>`,
+    state.adminCheckError === "permission-denied" ? `<span class="pill danger">Firestore rules not published</span>` : "",
+    `<button class="pill gray" data-action="copyUid" title="Copy your user ID"><i class="icon-copy"></i> ID: ${esc(u.uid.slice(0, 8))}…</button>`
   ].join("");
   $("#verifyBanner").hidden = u.emailVerified;
   $("#adminMenuItem").hidden = !state.isAdmin;
@@ -43,6 +45,15 @@ function renderAccount() {
     <div class="stat"><b>${pending}</b><span>In review</span></div>
     <div class="stat"><b>${state.saved.size}</b><span>Saved</span></div>`;
 }
+
+registerActions({
+  copyUid: async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    try { await navigator.clipboard.writeText(uid); toast("User ID copied", "success"); }
+    catch (_) { alertDialog("Your user ID", uid); }
+  }
+});
 
 function onSignedIn(user) {
   show("mainApp");
@@ -73,7 +84,17 @@ document.addEventListener("DOMContentLoaded", () => {
   initAuth({ onSignedIn, onSignedOut });
 
   ["profile-updated", "saved-changed", "my-listings-changed"].forEach((ev) => document.addEventListener(ev, renderAccount));
-  onTabShow("account", () => { renderAccount(); fetchMyListings().catch(() => {}); refreshPendingCount(); });
+  onTabShow("account", async () => {
+    renderAccount();
+    fetchMyListings().catch(() => {});
+    if (auth.currentUser) {
+      const was = state.isAdmin;
+      state.isAdmin = await checkAdmin(auth.currentUser.uid);
+      renderAccount();
+      if (state.isAdmin && !was) toast("Admin access enabled", "success");
+    }
+    refreshPendingCount();
+  });
 
   window.addEventListener("offline", () => toast("You're offline — showing saved data", "error"));
   window.addEventListener("online", () => { toast("Back online", "success"); if (state.user) loadListings(true); });

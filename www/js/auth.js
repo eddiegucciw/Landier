@@ -35,10 +35,14 @@ export async function loadProfile(user) {
 }
 
 export async function checkAdmin(uid) {
+  state.adminCheckError = null;
   try {
+    // getDoc goes to the server when online, so a newly added admins/{uid} is seen.
     const snap = await getDoc(doc(db, "admins", uid));
     return snap.exists();
-  } catch (_) {
+  } catch (e) {
+    console.warn("admin check failed", e);
+    state.adminCheckError = e?.code || "unknown";
     return false;
   }
 }
