@@ -9,12 +9,20 @@ import {
   openOverlay, onOverlayClose, isOverlayOpen, initials
 } from "./ui.js";
 import { emptyState, openDetail, getCurrentDetail } from "./listings.js";
+import { avatarHtml, hydrateAvatars } from "./profiles.js";
 
 const TS = { serverTimestamps: "estimate" };
 let activeConvId = null;
 let unsubThread = null;
 
 function convFromSnap(d) { return { id: d.id, ...d.data(TS) }; }
+
+function otherUid(c) {
+  return c.buyerId === state.user?.uid ? c.sellerId : c.buyerId;
+}
+function otherAvatar(c, cls = "xs") {
+  return `<span data-avatar-uid="${esc(otherUid(c))}" data-avatar-cls="${cls}">${avatarHtml(otherName(c), "", cls)}</span>`;
+}
 
 function otherName(c) {
   const me = state.user?.uid;
@@ -48,7 +56,7 @@ function renderConversations() {
     const mine = c.lastSenderId === state.user.uid;
     return `
       <button class="conv ${unread ? "unread" : ""}" data-action="openConv" data-id="${esc(c.id)}">
-        <img src="${safeImg(c.listingThumb)}" alt="">
+        <span class="cv-thumb"><img src="${safeImg(c.listingThumb)}" alt="">${otherAvatar(c, "xs")}</span>
         <div class="cv-body">
           <div class="cv-top"><b>${esc(otherName(c))}</b><small>${c.lastMessage ? esc(timeAgo(c.lastAt)) : ""}</small></div>
           <div class="cv-sub">${esc(c.listingTitle)}</div>
@@ -57,6 +65,7 @@ function renderConversations() {
         ${unread ? '<span class="unread-dot"></span>' : ""}
       </button>`;
   }).join("");
+  hydrateAvatars(list);
 }
 
 export function subscribeConversations(uid) {
@@ -82,7 +91,9 @@ function renderHeader(c) {
     <img src="${safeImg(c.listingThumb)}" alt="" data-action="openListing" data-id="${esc(c.listingId)}">
     <div class="ct-body" data-action="openListing" data-id="${esc(c.listingId)}">
       <b>${esc(otherName(c))}</b><small>${esc(c.listingTitle)}</small>
-    </div>`;
+    </div>
+    ${otherAvatar(c, "sm")}`;
+  hydrateAvatars($("#chatHeader"));
 }
 
 function dayLabel(d) {
