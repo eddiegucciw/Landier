@@ -78,8 +78,8 @@
     <section id="tab-home" class="tab active">
       <header class="app-header">
         <div>
-          <h1 id="greeting">Karibu</h1>
-          <p class="muted">Discover verified land across Kenya</p>
+          <h1>Welcome to LANDIER</h1>
+          <p class="muted" id="greeting">Discover verified land across Kenya</p>
         </div>
         <div class="header-actions">
           <button class="icon-btn" data-action="tab" data-tab="saved" aria-label="Saved"><i class="icon-heart"></i></button>
@@ -100,12 +100,32 @@
         </div>
       </div>
       <div class="chips" id="categoryChips"></div>
+
+      <div id="homeSections">
+        <section id="featuredSection" class="home-section" hidden>
+          <div class="section-head"><h2>Featured land</h2><span class="muted small" id="featuredCount"></span></div>
+          <div class="featured-row" id="featuredRow"></div>
+        </section>
+
+        <section class="home-section">
+          <button class="explore-cta" data-action="tab" data-tab="explore">
+            <span class="ec-icon"><i class="icon-globe"></i></span>
+            <span class="ec-text"><b>Explore land on the 3D map</b><small id="exploreCtaCount">Satellite view, terrain and property boundaries</small></span>
+            <i class="icon-chevron-right"></i>
+          </button>
+        </section>
+      </div>
+
       <div class="section-head">
-        <h2 id="resultsTitle">Latest land</h2>
+        <h2 id="resultsTitle">Recently added</h2>
         <button class="link" data-action="refreshListings"><i class="icon-refresh-cw"></i> Refresh</button>
       </div>
-      <div id="propertyGrid" class="grid">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      <div id="propertyGrid" class="grid mosaic">
+        <div class="skeleton wide"></div><div class="skeleton"></div><div class="skeleton"></div>
+      </div>
+      <div class="home-cta">
+        <b>Selling land?</b><span class="muted">List it free — buyers across Kenya can find it on the map.</span>
+        <button class="btn btn-primary sm" data-action="newListing"><i class="icon-circle-plus"></i> List your land</button>
       </div>
     </section>
 
@@ -119,8 +139,10 @@
             <input type="search" id="mapSearchInput" placeholder="Search a town or area in Kenya…" autocomplete="off">
             <button class="filter-btn" type="submit" aria-label="Search"><i class="icon-search"></i></button>
           </form>
+          <div id="mapSuggest" class="map-suggest" hidden></div>
           <div class="chips floating-chips" id="mapChips"></div>
         </div>
+        <div class="map-modes" id="mapModes"></div>
         <button class="fab-loc" data-action="myLocation" aria-label="My location"><i class="icon-locate-fixed"></i></button>
         <div id="mapCount" class="map-count" hidden></div>
         <div id="mapPreview" class="map-preview" hidden></div>
@@ -143,7 +165,10 @@
     <section id="tab-account" class="tab">
       <header class="page-header"><h2>My account</h2></header>
       <div class="card profile-card">
-        <div class="avatar" id="accountAvatar">?</div>
+        <button class="avatar-edit" data-action="editAvatar" aria-label="Change profile photo">
+          <span class="avatar" id="accountAvatar">?</span>
+          <span class="avatar-cam"><i class="icon-camera"></i></span>
+        </button>
         <div>
           <h3 id="accountName">—</h3>
           <p class="muted" id="accountEmail">—</p>
@@ -166,7 +191,7 @@
       <button class="nav-item" data-action="tab" data-tab="explore"><span class="nav-icon"><i class="icon-map"></i></span><span>Explore</span></button>
       <button class="nav-item" data-action="tab" data-tab="saved"><span class="nav-icon"><i class="icon-heart"></i></span><span>Saved</span></button>
       <button class="nav-item" data-action="tab" data-tab="messages"><span class="nav-icon"><i class="icon-message-circle"></i><span class="badge" id="msgBadge" hidden></span></span><span>Messages</span></button>
-      <button class="nav-item" data-action="tab" data-tab="account"><span class="nav-icon"><i class="icon-user"></i></span><span>Account</span></button>
+      <button class="nav-item" data-action="tab" data-tab="account"><span class="nav-icon" id="navAvatar"><i class="icon-user"></i></span><span>Account</span></button>
     </nav>
   </div>
 
@@ -225,14 +250,32 @@
       </div>
 
       <div class="fg">
-        <span>Location on map * <small class="muted">(tap the map or drag the pin)</small></span>
+        <span>Location on map *</span>
         <div class="picker-tools">
-          <input type="search" id="pickerSearch" placeholder="Search place…" autocomplete="off">
-          <button type="button" class="btn btn-ghost sm" data-action="pickerSearch"><i class="icon-search"></i></button>
-          <button type="button" class="btn btn-ghost sm" data-action="pickerLocate"><i class="icon-locate-fixed"></i></button>
+          <input type="search" id="pickerSearch" placeholder="Search town, estate, road or coordinates…" autocomplete="off">
+          <button type="button" class="btn btn-ghost sm" data-action="pickerSearch" aria-label="Search"><i class="icon-search"></i></button>
+          <button type="button" class="btn btn-ghost sm" data-action="pickerLocate" aria-label="Use my location"><i class="icon-locate-fixed"></i></button>
         </div>
-        <div id="pickerMap" class="map picker"></div>
+        <div class="seg picker-seg" id="pickerSeg">
+          <button type="button" class="active" data-action="pickerMode" data-mode="pin"><i class="icon-map-pin"></i> Location pin</button>
+          <button type="button" data-action="pickerMode" data-mode="boundary"><i class="icon-pentagon"></i> Draw boundary</button>
+        </div>
+        <div class="picker-wrap">
+          <div id="pickerMap" class="map picker"></div>
+          <div class="map-modes small" id="pickerModes"></div>
+        </div>
+        <small class="muted" id="pickerHint">Tap the map or drag the pin to the land's position.</small>
         <small class="muted" id="pickerCoords">No location selected</small>
+        <div class="boundary-tools" id="boundaryTools" hidden>
+          <div class="bt-row">
+            <button type="button" class="btn btn-ghost sm" data-action="boundaryUndo"><i class="icon-undo-2"></i> Undo</button>
+            <button type="button" class="btn btn-ghost sm" data-action="boundaryClear"><i class="icon-trash-2"></i> Clear</button>
+            <span class="bt-area" id="boundaryArea">No boundary</span>
+          </div>
+          <small class="bt-error" id="boundaryError" hidden></small>
+          <small class="muted">Tap the map to add corner points, drag a point to move it, tap a point to remove it. Optional.</small>
+          <div class="notice warn"><i class="icon-triangle-alert"></i><span>Boundaries drawn here are <b>indicative only</b> — they are not an official survey. Buyers should confirm beacons with a licensed surveyor.</span></div>
+        </div>
       </div>
 
       <p class="muted small" id="formNote">Listings are reviewed by our team before they go live — usually within 24 hours.</p>
@@ -303,6 +346,25 @@
     </div>
   </section>
 
+  <section id="ov-avatar" class="overlay" aria-hidden="true">
+    <div class="topbar"><button class="icon-btn" data-action="back" aria-label="Back"><i class="icon-arrow-left"></i></button><h3>Profile photo</h3></div>
+    <div class="overlay-scroll avatar-editor">
+      <div class="crop-stage" id="cropStage">
+        <canvas id="cropCanvas" width="600" height="600"></canvas>
+        <div class="crop-ring"></div>
+        <div class="crop-empty" id="cropEmpty"><i class="icon-image-plus"></i><span>Choose a photo</span></div>
+      </div>
+      <label class="crop-zoom" id="cropZoomWrap" hidden><i class="icon-zoom-out"></i><input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1"><i class="icon-zoom-in"></i></label>
+      <p class="muted small center" id="cropHint">JPG, PNG or WebP, up to 15 MB. Drag to position, use the slider to zoom.</p>
+      <div class="upload-progress" id="avatarProgress" hidden><div class="bar"><span id="avatarProgressBar"></span></div><small id="avatarProgressText">Uploading… 0%</small></div>
+      <div class="avatar-actions">
+        <label class="btn btn-ghost btn-block"><input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp" hidden><i class="icon-image"></i> <span id="avatarPickLabel">Choose photo</span></label>
+        <button class="btn btn-primary btn-block" id="avatarSave" data-action="saveAvatar" disabled><i class="icon-check"></i> Save photo</button>
+        <button class="btn btn-ghost btn-block danger-text" id="avatarRemove" data-action="removeAvatar" hidden><i class="icon-trash-2"></i> Remove photo</button>
+      </div>
+    </div>
+  </section>
+
   <section id="ov-legal" class="overlay" aria-hidden="true">
     <div class="topbar"><button class="icon-btn" data-action="back" aria-label="Back"><i class="icon-arrow-left"></i></button><h3>Terms &amp; Privacy</h3></div>
     <div class="overlay-scroll prose">
@@ -312,8 +374,8 @@
       <p><b>Before paying any money</b>, buyers should visit the land, do an official search at the Ministry of Lands (Ardhisasa), confirm the seller's ID matches the title, and use a registered advocate for the sale agreement.</p>
       <p>We may remove listings or accounts that are fraudulent, misleading, or abusive.</p>
       <h3>Privacy</h3>
-      <p>We store your name, email, and phone number to run your account. Your name and phone number are shown on land you list so buyers can contact you. Messages are visible only to you and the other person in the chat, and to administrators investigating reported fraud.</p>
-      <p>Your location is used only on your device to centre the map; it is not stored. Maps are provided by OpenStreetMap and Esri; place searches are sent to OpenStreetMap's Nominatim service. You can delete your account and listings at any time from Settings.</p>
+      <p>We store your name, email, phone number and optional profile photo to run your account. Your name and profile photo are visible to other signed-in users. Your name and phone number are shown on land you list so buyers can contact you. Messages are visible only to you and the other person in the chat, and to administrators investigating reported fraud.</p>
+      <p>Your location is used only on your device to centre the map; it is not stored. Maps use OpenStreetMap data (via OpenFreeMap), Sentinel-2 imagery by EOX and public elevation data; place searches are sent to OpenStreetMap's Nominatim service. You can delete your account and listings at any time from Settings.</p>
     </div>
   </section>
 

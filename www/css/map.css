@@ -1,31 +1,72 @@
-/* Landier — Leaflet / OpenStreetMap map styles (loaded after styles.css) */
+/* Landier — MapLibre map styles (loaded after styles.css) */
 
-/* Overlay controls on the explore map */
-.map-top, .fab-loc, .map-count, .map-preview { z-index: 1000; }
-.fab-loc { right: 10px; bottom: 90px; transition: bottom .2s ease; }
+/* ---------- Explore overlay controls ---------- */
+.map-top, .fab-loc, .map-count, .map-preview, .map-modes { z-index: 5; }
+.map-top { pointer-events: none; }
+.map-top > * { pointer-events: auto; }
+.fab-loc { right: 10px; bottom: 150px; transition: bottom .2s ease; }
 .map-count { left: 50%; transform: translateX(-50%); bottom: 18px; }
 .map-preview { bottom: 14px; }
-/* Keep "my location" above the listing preview card */
-.map-wrap:has(.map-preview:not([hidden])) .fab-loc { bottom: 136px; }
+.map-wrap:has(.map-preview:not([hidden])) .fab-loc { bottom: 196px; }
 
-/* Price pins */
-.price-pin { position: absolute; transform: translate(-50%, calc(-100% - 6px)); background: var(--brand); color: #fff; font: 700 12px/1 var(--font); padding: 6px 9px; border-radius: 999px; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); white-space: nowrap; cursor: pointer; }
-.price-pin::after { content: ""; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--brand); border-bottom: 0; }
-.price-pin.active { background: var(--brand-dark); transform: translate(-50%, calc(-100% - 6px)) scale(1.12); }
-.price-pin.active::after { border-top-color: var(--brand-dark); }
+.map-modes { position: absolute; right: 10px; top: calc(140px + var(--safe-top)); display: flex; flex-direction: column; gap: 8px; }
+.map-modes.small { top: 10px; left: 10px; right: auto; }
+.map-btn { width: 46px; height: 46px; border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); font: 800 .85rem/1 var(--font); display: flex; align-items: center; justify-content: center; font-size: .9rem; }
+.map-btn i { font-size: 1.2rem; }
+.map-modes.small .map-btn { width: 40px; height: 40px; border-radius: 12px; }
+.picker-wrap { position: relative; }
 
-/* Location pin (picker + detail map) */
-.drop-pin { position: relative; width: 30px; height: 30px; background: var(--danger); border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,.35); margin-top: 2px; }
+/* Search suggestions */
+.map-suggest { background: var(--surface); border-radius: var(--r-md); box-shadow: var(--shadow-lg); overflow: hidden; max-height: 50vh; overflow-y: auto; }
+.map-suggest .sg { display: flex; gap: 12px; align-items: center; width: 100%; padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+.map-suggest .sg:last-child { border-bottom: 0; }
+.map-suggest .sg > i { color: var(--brand); font-size: 1.1rem; }
+.map-suggest .sg span { display: flex; flex-direction: column; min-width: 0; }
+.map-suggest .sg b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-suggest .sg small { color: var(--muted); font-size: .78rem; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-suggest .sg-note { padding: 9px 14px; font-size: .78rem; color: var(--muted); background: var(--surface-2); }
+
+/* Hide MapLibre's own geolocate button; the round "my location" button triggers it. */
+.maplibregl-ctrl-geolocate { display: none !important; }
+.maplibregl-ctrl-group { border-radius: 12px !important; overflow: hidden; box-shadow: var(--shadow-lg) !important; }
+.maplibregl-ctrl-bottom-right { bottom: 60px; }
+.maplibregl-ctrl-attrib { font-size: 10px; }
+[data-theme="dark"] .maplibregl-ctrl-group, [data-theme="dark"] .maplibregl-ctrl-attrib { background: var(--surface); }
+[data-theme="dark"] .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1); }
+.maplibregl-canvas { outline: none; }
+
+/* ---------- Pins (inner elements; the .pin-wrap is positioned by MapLibre) ---------- */
+.pin-wrap { cursor: pointer; }
+.price-pin { position: relative; background: var(--brand); color: #fff; font: 700 12px/1.1 var(--font); padding: 5px 9px; border-radius: 12px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); white-space: nowrap; text-align: center; margin-bottom: 7px; transition: transform .15s ease, background .15s ease; }
+.price-pin small { display: block; font-size: 9.5px; font-weight: 600; opacity: .9; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+.price-pin::after { content: ""; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 7px solid transparent; border-top-color: #fff; border-bottom: 0; }
+.price-pin::before { content: ""; position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--brand); border-bottom: 0; z-index: 1; }
+.pin-wrap.active { z-index: 10; }
+.pin-wrap.active .price-pin { background: var(--brand-dark); transform: scale(1.15); }
+.pin-wrap.active .price-pin::before { border-top-color: var(--brand-dark); }
+
+.drop-pin { position: relative; width: 30px; height: 30px; background: var(--danger); border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,.35); margin: 0 0 10px; }
 .drop-pin::after { content: ""; position: absolute; inset: 7px; background: #fff; border-radius: 50%; }
-
-/* Leaflet look & feel */
-.leaflet-container { font-family: var(--font); background: var(--surface-2); }
-.leaflet-control-layers, .leaflet-bar a { border-radius: 10px !important; }
-.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background: rgba(16,185,129,.25) !important; }
-.marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background: var(--brand) !important; color: #fff; font-weight: 700; font-family: var(--font); }
-[data-theme="dark"] .leaflet-control-layers, [data-theme="dark"] .leaflet-bar a, [data-theme="dark"] .leaflet-control-attribution { background: var(--surface); color: var(--text); }
-[data-theme="dark"] .leaflet-control-attribution a { color: var(--brand); }
-
-/* Search result pin + its label */
 .drop-pin.search { background: var(--info); }
-.leaflet-tooltip.search-label { font: 600 12px/1.3 var(--font); padding: 5px 9px; border-radius: 8px; border: 0; box-shadow: 0 2px 8px rgba(0,0,0,.25); max-width: 220px; white-space: normal; }
+.maplibregl-popup.search-label .maplibregl-popup-content { font: 600 12px/1.3 var(--font); padding: 6px 10px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.25); max-width: 220px; color: #0F172A; }
+
+/* Boundary drawing vertices */
+.vertex { width: 22px; height: 22px; border-radius: 50%; background: #F59E0B; border: 3px solid #fff; color: #fff; font: 700 10px/16px var(--font); text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.4); cursor: grab; }
+.vertex.passive { opacity: .8; cursor: default; }
+
+/* Explore preview card extras */
+.mp-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+
+/* ---------- Listing form: pin / boundary ---------- */
+.picker-seg { padding: 0; background: transparent; border: 0; margin-bottom: 8px; }
+.picker-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.map.picker { height: 320px; }
+.boundary-tools { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.bt-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bt-area { margin-left: auto; font-weight: 700; font-size: .85rem; color: var(--brand-dark); }
+[data-theme="dark"] .bt-area { color: var(--brand); }
+.bt-error { color: var(--danger); font-weight: 600; }
+
+/* Detail map */
+.map.mini { height: 210px; cursor: pointer; }
+.distance { margin-top: 8px; font-size: .9rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
