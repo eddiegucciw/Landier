@@ -33,8 +33,6 @@ function renderAccount() {
     u.emailVerified ? `<span class="pill"><i class="icon-badge-check"></i> Verified</span>` : `<span class="pill warn">Email not verified</span>`,
     state.isAdmin ? `<span class="pill info"><i class="icon-shield-check"></i> Admin</span>` : "",
     p.phone ? "" : `<span class="pill warn">Add phone in Settings</span>`,
-    state.adminCheckError === "permission-denied" ? `<span class="pill danger">Firestore rules not published</span>`
-      : state.adminCheckError ? `<span class="pill danger">Admin check failed: ${esc(state.adminCheckError)}</span>` : "",
     `<button class="pill gray" data-action="copyUid" title="Copy your user ID"><i class="icon-copy"></i> ID: ${esc(u.uid.slice(0, 8))}…</button>`
   ].join("");
   $("#verifyBanner").hidden = u.emailVerified;
@@ -56,11 +54,9 @@ registerActions({
     state.isAdmin = await checkAdmin(uid);
     renderAccount();
     const result = state.isAdmin
-      ? "FOUND - you are an admin."
-      : state.adminCheckError
-        ? `ERROR: ${state.adminCheckError}`
-        : `NOT FOUND - Firestore has no document at admins/${uid}`;
-    alertDialog("Your user ID (copied)", `${uid}\n\nLength: ${uid.length} characters\nProject: ${auth.app?.options?.projectId || "?"}\nAdmin check: ${result}`);
+      ? "you are an admin."
+      : `not an admin. In Firestore, open users/${uid} and add the field role = admin (string).`;
+    alertDialog("Your user ID (copied)", `${uid}\n\nRole: ${state.profile?.role || "(none)"}\nAdmin: ${result}`);
   }
 });
 
@@ -93,14 +89,13 @@ document.addEventListener("DOMContentLoaded", () => {
   initAuth({ onSignedIn, onSignedOut });
 
   ["profile-updated", "saved-changed", "my-listings-changed"].forEach((ev) => document.addEventListener(ev, renderAccount));
+  document.addEventListener("admin-changed", () => { refreshPendingCount(); loadListings(true); });
   onTabShow("account", async () => {
     renderAccount();
     fetchMyListings().catch(() => {});
     if (auth.currentUser) {
-      const was = state.isAdmin;
       state.isAdmin = await checkAdmin(auth.currentUser.uid);
       renderAccount();
-      if (state.isAdmin && !was) toast("Admin access enabled", "success");
     }
     refreshPendingCount();
   });

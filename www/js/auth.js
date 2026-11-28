@@ -2,7 +2,7 @@
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, sendPasswordResetEmail, sendEmailVerification, updateProfile, reload,
-  doc, getDoc, setDoc, serverTimestamp
+  doc, getDoc, setDoc, onSnapshot, serverTimestamp
 } from "./firebase.js";
 import { state } from "./state.js";
 import { $, $$, toast, friendlyError, setBusy, registerActions, normalizeKePhone, alertDialog } from "./ui.js";
@@ -34,17 +34,40 @@ export async function loadProfile(user) {
   return profile;
 }
 
+// A user is an admin when their profile has role: "admin" (set in the Firebase console),
+// or, for older setups, when a document exists at admins/{uid}.
+export function isAdminNow() {
+  return state.profile?.role === "admin" || state.adminDoc === true;
+}
+
 export async function checkAdmin(uid) {
   state.adminCheckError = null;
   try {
-    // getDoc goes to the server when online, so a newly added admins/{uid} is seen.
     const snap = await getDoc(doc(db, "admins", uid));
-    return snap.exists();
+    state.adminDoc = snap.exists();
   } catch (e) {
-    console.warn("admin check failed", e);
-    state.adminCheckError = e?.code || "unknown";
-    return false;
+    // Expected when the admins collection isn't used; the profile role still counts.
+    state.adminDoc = false;
+    if (state.profile?.role !== "admin") state.adminCheckError = e?.code || "unknown";
   }
+  return isAdminNow();
+}
+
+// Live profile listener: role changes made in the Firebase console apply within seconds.
+export function watchProfile(uid) {
+  const unsub = onSnapshot(doc(db, "users", uid), (snap) => {
+    if (!snap.exists() || state.user?.uid !== uid) return;
+    const was = state.isAdmin;
+    state.profile = { ...snap.data() };
+    state.isAdmin = isAdminNow();
+    if (state.isAdmin) state.adminCheckError = null;
+    document.dispatchEvent(new CustomEvent("profile-updated"));
+    if (state.isAdmin !== was) {
+      document.dispatchEvent(new CustomEvent("admin-changed"));
+      toast(state.isAdmin ? "Admin access enabled" : "Admin access removed", state.isAdmin ? "success" : "info");
+    }
+  }, (e) => console.warn("profile listener", e));
+  state.unsubscribers.push(unsub);
 }
 
 // Reload the auth user so a just-clicked verification link is picked up.
@@ -167,11 +190,13 @@ export function initAuth({ onSignedIn, onSignedOut }) {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       state.user = user;
-      const [profile, isAdmin] = await Promise.all([loadProfile(user), checkAdmin(user.uid)]);
+      const profile = await loadProfile(user);
       if (state.user !== user) return; // signed out meanwhile
       state.profile = profile;
-      state.isAdmin = isAdmin;
+      state.isAdmin = await checkAdmin(user.uid);
+      if (state.user !== user) return;
       onSignedIn(user);
+      watchProfile(user.uid);
     } else {
       showView("login");
       onSignedOut();

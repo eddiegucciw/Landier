@@ -3,6 +3,8 @@ export const state = {
   user: null,          // Firebase auth user
   profile: null,       // users/{uid} document data
   isAdmin: false,
+  adminDoc: false,
+  adminCheckError: null,
   listings: [],        // approved listings (home feed)
   listingById: new Map(),
   saved: new Set(),    // ids of saved listings
@@ -22,6 +24,8 @@ export function resetState() {
   state.user = null;
   state.profile = null;
   state.isAdmin = false;
+  state.adminDoc = false;
+  state.adminCheckError = null;
   state.listings = [];
   state.listingById.clear();
   state.saved = new Set();

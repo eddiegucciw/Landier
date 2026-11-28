@@ -1,14 +1,18 @@
 rules_version = '2';
 
 // Landier — Firestore security rules.
-// Admins: create a document at /admins/{uid} (any content) in the Firebase console.
+// Make someone an admin: in the Firebase console open users/{their uid} and add the
+// string field  role = "admin". (A document at admins/{uid} also still works.)
+// Users can never set or change their own role from the app.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
     function isMe(uid) { return signedIn() && request.auth.uid == uid; }
     function isAdmin() {
-      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return signedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin'
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
     function verified() { return signedIn() && request.auth.token.email_verified == true; }
     function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
@@ -22,14 +26,17 @@ service cloud.firestore {
 
     // ---------- User profiles (private) ----------
     function validProfile(d) {
-      return d.keys().hasOnly(['fullName', 'email', 'phone', 'createdAt', 'updatedAt', 'sellerEnabled'])
+      return d.keys().hasOnly(['fullName', 'email', 'phone', 'createdAt', 'updatedAt', 'sellerEnabled', 'role'])
         && str(d.fullName, 1, 80)
         && (!('phone' in d) || (d.phone is string && d.phone.matches('^(254[17][0-9]{8})?$')))
         && (!('email' in d) || d.email is string);
     }
     match /users/{uid} {
       allow read: if isMe(uid) || isAdmin();
-      allow create, update: if isMe(uid) && validProfile(request.resource.data);
+      // role is console-only: it can't be added on create or changed on update.
+      allow create: if isMe(uid) && validProfile(request.resource.data) && !('role' in request.resource.data);
+      allow update: if isMe(uid) && validProfile(request.resource.data)
+        && request.resource.data.get('role', '') == resource.data.get('role', '');
       allow delete: if isMe(uid);
 
       match /saved/{listingId} {
