@@ -86,6 +86,18 @@ export function initAdmin() {
       loadQueue();
     },
     adminApprove: (el) => moderate(el.dataset.id, "approved"),
+    adminFeature: async (el) => {
+      const id = el.dataset.id;
+      const l = state.listingById.get(id);
+      const featured = !l?.featured;
+      try {
+        await updateDoc(doc(db, "landListings", id), { featured, updatedAt: serverTimestamp() });
+        if (l) l.featured = featured;
+        toast(featured ? "Featured on the home page" : "Removed from featured", "success");
+        loadListings(true);
+        if ($("#ov-detail").classList.contains("active")) { closeOverlay(); setTimeout(() => openDetail(id), 350); }
+      } catch (e) { toast(friendlyError(e), "error"); }
+    },
     adminReject: async (el) => {
       const reason = await promptDialog({
         title: "Reason for rejection",

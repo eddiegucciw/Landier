@@ -25,8 +25,14 @@ service cloud.firestore {
     }
 
     // ---------- User profiles (private) ----------
+    // Profile photos live in Firebase Storage under avatars/{uid}/; only the URL is stored here.
+    function validPhoto(d, uid) {
+      return (!('photoURL' in d) || (d.photoURL is string && d.photoURL.size() < 1000
+                && d.photoURL.matches('^https://firebasestorage[.]googleapis[.]com/.*')))
+        && (!('photoPath' in d) || (d.photoPath is string && d.photoPath.matches('^avatars/' + uid + '/[A-Za-z0-9_.-]+$')));
+    }
     function validProfile(d) {
-      return d.keys().hasOnly(['fullName', 'email', 'phone', 'createdAt', 'updatedAt', 'sellerEnabled', 'role'])
+      return d.keys().hasOnly(['fullName', 'email', 'phone', 'createdAt', 'updatedAt', 'sellerEnabled', 'role', 'photoURL', 'photoPath'])
         && str(d.fullName, 1, 80)
         && (!('phone' in d) || (d.phone is string && d.phone.matches('^(254[17][0-9]{8})?$')))
         && (!('email' in d) || d.email is string);
@@ -34,8 +40,9 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isMe(uid) || isAdmin();
       // role is console-only: it can't be added on create or changed on update.
-      allow create: if isMe(uid) && validProfile(request.resource.data) && !('role' in request.resource.data);
-      allow update: if isMe(uid) && validProfile(request.resource.data)
+      allow create: if isMe(uid) && validProfile(request.resource.data) && validPhoto(request.resource.data, uid)
+        && !('role' in request.resource.data);
+      allow update: if isMe(uid) && validProfile(request.resource.data) && validPhoto(request.resource.data, uid)
         && request.resource.data.get('role', '') == resource.data.get('role', '');
       allow delete: if isMe(uid);
 
@@ -45,12 +52,32 @@ service cloud.firestore {
       }
     }
 
+    // ---------- Public profile cards (name + photo, visible to signed-in users) ----------
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['fullName', 'photoURL', 'updatedAt'])
+        && str(request.resource.data.fullName, 1, 80)
+        && validPhoto(request.resource.data, uid);
+      allow delete: if isMe(uid);
+    }
+
     // ---------- Listings ----------
+    // Optional seller-drawn boundary: {points: [{lat, lng}, ...] (3–60), areaSqm}.
+    function validBoundary(d) {
+      return !('boundary' in d) || d.boundary == null || (
+        d.boundary is map && d.boundary.keys().hasOnly(['points', 'areaSqm'])
+        && d.boundary.points is list && d.boundary.points.size() >= 3 && d.boundary.points.size() <= 60
+        && d.boundary.areaSqm is number && d.boundary.areaSqm >= 0 && d.boundary.areaSqm <= 500000000);
+    }
     function validListing(d) {
       return d.keys().hasOnly([
           'sellerId', 'sellerName', 'sellerPhone', 'title', 'price', 'size', 'landUse', 'titleStatus',
           'county', 'town', 'location', 'description', 'latitude', 'longitude', 'coverThumb',
-          'imageCount', 'status', 'rejectionReason', 'createdAt', 'updatedAt', 'moderatedBy', 'moderatedAt'])
+          'imageCount', 'status', 'rejectionReason', 'createdAt', 'updatedAt', 'moderatedBy', 'moderatedAt',
+          'boundary', 'featured'])
+        && validBoundary(d)
+        && (!('featured' in d) || d.featured is bool)
         && str(d.title, 5, 120)
         && d.price is number && d.price >= 1000 && d.price <= 100000000000
         && str(d.size, 1, 60)
@@ -75,7 +102,8 @@ service cloud.firestore {
         && request.resource.data.sellerId == request.auth.uid
         && validListing(request.resource.data)
         && request.resource.data.createdAt == request.time
-        && (request.resource.data.status == 'pending' || isAdmin());
+        && (request.resource.data.status == 'pending' || isAdmin())
+        && (!('featured' in request.resource.data) || isAdmin());
 
       allow update: if isAdmin() && validListing(request.resource.data)
         || (signedIn() && resource.data.sellerId == request.auth.uid
@@ -89,8 +117,8 @@ service cloud.firestore {
               // contact details sync without changing anything else
               || (changed().hasOnly(['sellerName', 'sellerPhone', 'updatedAt']))
             )
-            // owners can't hand-edit moderation fields
-            && !changed().hasAny(['moderatedBy', 'moderatedAt']));
+            // owners can't hand-edit moderation fields or feature their own land
+            && !changed().hasAny(['moderatedBy', 'moderatedAt', 'featured']));
 
       allow delete: if isAdmin() || (signedIn() && resource.data.sellerId == request.auth.uid);
 

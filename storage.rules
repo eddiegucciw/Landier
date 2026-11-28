@@ -1,0 +1,22 @@
+rules_version = '2';
+
+// Landier — Firebase Storage security rules.
+// Profile photos: avatars/{uid}/{file}. Anyone can view them (they're shown on listings and in chat);
+// only the owner can upload, replace or delete their own, and only small JPEG/PNG/WebP images.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /avatars/{uid}/{fileName} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && fileName.matches('[A-Za-z0-9_.-]+')
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Everything else is closed.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

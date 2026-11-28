@@ -6,8 +6,9 @@ import {
 import { state, cacheListing } from "./state.js";
 import {
   $, esc, safeImg, formatKsh, timeAgo, toast, friendlyError, registerActions, openOverlay,
-  switchTab, openExternal, onTabShow, initials, getCurrentTab
+  switchTab, openExternal, onTabShow, initials, getCurrentTab, onOverlayClose
 } from "./ui.js";
+import { avatarHtml, hydrateAvatars } from "./profiles.js";
 import { LAND_USES, COUNTIES } from "./config.js";
 
 export const STATUS_LABEL = {
@@ -110,23 +111,38 @@ export function emptyState(icon, title, text = "", extra = "") {
   return `<div class="empty"><i class="${icon}"></i><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ""}${extra}</div>`;
 }
 
-export function cardHtml(l) {
+function availabilityHtml(l) {
+  if (!l.status || l.status === "approved") return `<span class="avail">Available</span>`;
+  const [label, cls] = STATUS_LABEL[l.status] || ["", ""];
+  return `<span class="avail ${cls}">${esc(label)}</span>`;
+}
+
+// variant: "wide" (spans two columns), "feature" (carousel), or "" (standard)
+export function cardHtml(l, variant = "") {
   const saved = state.saved.has(l.id);
-  const status = l.status && l.status !== "approved" ? STATUS_LABEL[l.status] : null;
   return `
-    <article class="card-l" data-action="openListing" data-id="${esc(l.id)}">
+    <article class="card-l ${variant}" data-action="openListing" data-id="${esc(l.id)}">
       <div class="card-img">
         <img src="${safeImg(l.coverThumb)}" alt="" loading="lazy">
-        ${status ? `<span class="tag">${esc(status[0])}</span>` : l.landUse ? `<span class="tag">${esc(l.landUse)}</span>` : ""}
+        ${l.landUse ? `<span class="tag">${esc(l.landUse)}</span>` : ""}
         <button class="fav ${saved ? "on" : ""}" data-action="toggleSave" data-id="${esc(l.id)}" aria-label="${saved ? "Remove from saved" : "Save"}"><i class="icon-heart"></i></button>
+        ${variant ? `<div class="card-img-price">${formatKsh(l.price)}</div>` : ""}
       </div>
       <div class="card-body">
-        <div class="card-price">${formatKsh(l.price)}</div>
+        ${variant ? "" : `<div class="card-price">${formatKsh(l.price)}</div>`}
         <div class="card-title">${esc(l.title)}</div>
-        <div class="card-loc"><i class="icon-map-pin"></i> ${esc(listingLocation(l))}</div>
-        ${l.size ? `<div class="card-size">${esc(l.size)}</div>` : ""}
+        <div class="card-loc"><i class="icon-map-pin"></i> <span>${esc(listingLocation(l))}</span></div>
+        <div class="card-foot">
+          ${l.size ? `<span class="card-size"><i class="icon-ruler"></i> ${esc(l.size)}</span>` : ""}
+          ${availabilityHtml(l)}
+        </div>
       </div>
     </article>`;
+}
+
+// Alternating mosaic: one wide card, then two standard cards, repeated.
+function mosaicHtml(list) {
+  return list.map((l, i) => cardHtml(l, i % 3 === 0 ? "wide" : "")).join("");
 }
 
 function filtersActive() {
@@ -139,14 +155,26 @@ export function renderHome() {
   const grid = $("#propertyGrid");
   $("#filterDot").hidden = !filtersActive();
   const f = state.filters;
-  $("#resultsTitle").textContent =
-    f.search || filtersActive() || f.category !== "All" ? `${list.length} result${list.length === 1 ? "" : "s"}` : "Latest land";
+  const searching = !!(f.search || filtersActive() || f.category !== "All");
+  $("#resultsTitle").textContent = searching ? `${list.length} result${list.length === 1 ? "" : "s"}` : "Recently added";
+
+  // Featured row (admin-picked listings) and the map call-to-action show on the default view only.
+  $("#homeSections").hidden = searching;
+  const featured = state.listings.filter((l) => l.featured === true);
+  $("#featuredSection").hidden = !featured.length;
+  $("#featuredRow").innerHTML = featured.map((l) => cardHtml(l, "feature")).join("");
+  $("#featuredCount").textContent = featured.length ? `${featured.length} picked by Landier` : "";
+  const onMap = state.listings.filter((l) => Number.isFinite(l.latitude)).length;
+  $("#exploreCtaCount").textContent = onMap
+    ? `${onMap} listing${onMap === 1 ? "" : "s"} on the map · satellite, terrain and boundaries`
+    : "Satellite view, terrain and property boundaries";
+
   if (!state.listings.length) {
     grid.innerHTML = emptyState("icon-map", "No land listed yet", "Be the first to list land on Landier.", `<button class="btn btn-primary sm" data-action="newListing">List your land</button>`);
     return;
   }
   grid.innerHTML = list.length
-    ? list.map(cardHtml).join("")
+    ? mosaicHtml(list)
     : emptyState("icon-search-x", "No matching land", "Try a different search or clear your filters.", `<button class="btn btn-ghost sm" data-action="resetFilters">Clear filters</button>`);
 }
 
@@ -217,7 +245,7 @@ export async function renderSaved() {
   if (token !== savedRenderToken) return;
   const html = ids.map((id, i) => {
     const l = results[i];
-    if (l) return cardHtml(l);
+    if (l) return cardHtml(l, i % 3 === 0 ? "wide" : "");
     return `<article class="card-l"><div class="card-img"><img src="${safeImg()}" alt=""></div>
       <div class="card-body"><div class="card-title">No longer available</div>
       <button class="btn btn-ghost sm" data-action="toggleSave" data-id="${esc(id)}">Remove</button></div></article>`;
@@ -272,6 +300,7 @@ export function renderDetail(l, imgs) {
   const isOwner = l.sellerId === me;
   const status = STATUS_LABEL[l.status] || ["", ""];
   const hasLoc = Number.isFinite(l.latitude) && Number.isFinite(l.longitude);
+  const hasBoundary = Array.isArray(l.boundary?.points) && l.boundary.points.length >= 3;
 
   let notice = "";
   if (l.status === "pending") notice = `<div class="notice warn"><i class="icon-clock"></i><span>This listing is awaiting review and isn't visible to buyers yet.</span></div>`;
@@ -293,6 +322,7 @@ export function renderDetail(l, imgs) {
       <div class="row-actions" style="margin-top:10px">
         ${l.status !== "approved" ? `<button class="btn btn-primary sm" data-action="adminApprove" data-id="${esc(l.id)}">Approve</button>` : ""}
         ${l.status !== "rejected" ? `<button class="btn btn-ghost sm" data-action="adminReject" data-id="${esc(l.id)}">${l.status === "approved" ? "Unpublish" : "Reject"}</button>` : ""}
+        ${l.status === "approved" ? `<button class="btn btn-ghost sm" data-action="adminFeature" data-id="${esc(l.id)}"><i class="icon-star"></i> ${l.featured ? "Unfeature" : "Feature"}</button>` : ""}
         <button class="btn btn-ghost sm" data-action="adminDelete" data-id="${esc(l.id)}" style="color:var(--danger)">Delete</button>
       </div></div>`;
   }
@@ -316,15 +346,25 @@ export function renderDetail(l, imgs) {
       ${ownerTools}
       ${adminTools}
       <div><div class="section-title">About this land</div><p class="desc">${esc(l.description)}</p></div>
-      ${hasLoc ? `<div><div class="section-title" style="margin-bottom:8px">Location</div><div id="detailMap" class="map mini"></div>
-        <button class="btn btn-ghost btn-block sm" style="margin-top:8px" data-action="directions"><i class="icon-navigation"></i> Get directions</button></div>` : ""}
+      ${hasLoc ? `<div>
+        <div class="section-title" style="margin-bottom:8px">Location</div>
+        <div id="detailMap" class="map mini"></div>
+        ${hasBoundary ? `<p class="muted small" style="margin-top:6px"><i class="icon-pentagon"></i> Seller-drawn boundary${l.boundary.areaSqm ? ` · ${esc(formatAreaShort(l.boundary.areaSqm))}` : ""} — indicative only, not an official survey.</p>` : ""}
+        <div class="distance" id="detailDistance"><button class="link" data-action="detailDistance"><i class="icon-locate-fixed"></i> How far is this from me?</button></div>
+        <div class="row-actions" style="margin-top:8px">
+          <button class="btn btn-ghost sm" data-action="directions" data-mode="driving"><i class="icon-car"></i> Drive</button>
+          <button class="btn btn-ghost sm" data-action="directions" data-mode="walking"><i class="icon-footprints"></i> Walk</button>
+          <button class="btn btn-ghost sm" data-action="viewOnMap"><i class="icon-globe"></i> 3D map</button>
+        </div></div>` : ""}
       <div class="seller">
-        <div class="avatar sm">${esc(initials(l.sellerName))}</div>
+        <span data-avatar-uid="${esc(l.sellerId)}" data-avatar-cls="sm">${avatarHtml(l.sellerName, "", "sm")}</span>
         <div><b>${esc(l.sellerName || "Seller")}</b><div class="muted small">${isOwner ? "You" : "Seller"}</div></div>
       </div>
       <div class="notice info"><i class="icon-shield-alert"></i><span><b>Stay safe:</b> visit the land, do an official search on Ardhisasa, and never pay before signing an agreement with an advocate.</span></div>
     </div>`;
   renderGallery(imgs);
+  hydrateAvatars($("#detailBody"));
+  if (state.myLocation && hasLoc) showDistance(l, state.myLocation);
 
   const saved = state.saved.has(l.id);
   $("#detailCta").innerHTML = isOwner
@@ -333,6 +373,24 @@ export function renderDetail(l, imgs) {
        ${l.sellerPhone ? `<button class="btn btn-ghost icon-only" data-action="callSeller" aria-label="Call"><i class="icon-phone"></i></button>
        <button class="btn btn-ghost icon-only" data-action="whatsappSeller" aria-label="WhatsApp"><i class="icon-message-square-text"></i></button>` : ""}
        <button class="btn btn-primary" data-action="chatSeller"><i class="icon-message-circle"></i> Chat</button>`;
+}
+
+function formatAreaShort(sqm) {
+  const acres = sqm / 4046.8564;
+  return acres < 1 ? `${Math.round(sqm).toLocaleString("en-KE")} m² (${acres.toFixed(2)} acres)` : `${acres.toFixed(2)} acres`;
+}
+
+function distanceKm(a, b) {
+  const r = (d) => (d * Math.PI) / 180;
+  const h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6371.0088 * Math.asin(Math.sqrt(h));
+}
+
+function showDistance(l, me) {
+  const el = $("#detailDistance");
+  if (!el) return;
+  const km = distanceKm(me, { lat: l.latitude, lng: l.longitude });
+  el.innerHTML = `<i class="icon-locate-fixed"></i> <b>${km < 1 ? Math.round(km * 1000) + " m" : km.toFixed(km < 10 ? 1 : 0) + " km"}</b> <span class="muted">from you in a straight line — road distance is longer.</span>`;
 }
 
 // ---------- Init ----------
@@ -361,6 +419,7 @@ export function initListings() {
   });
 
   onTabShow("saved", renderSaved);
+  onOverlayClose("ov-detail", () => document.dispatchEvent(new CustomEvent("detail-closed")));
 
   registerActions({
     tab: (el) => switchTab(el.dataset.tab),
@@ -395,9 +454,31 @@ export function initListings() {
       const text = `Hi, I'm interested in your land on Landier: "${currentDetail.title}" (${formatKsh(currentDetail.price)}). Is it still available?`;
       openExternal(`https://wa.me/${currentDetail.sellerPhone}?text=${encodeURIComponent(text)}`);
     },
-    directions: () => {
+    directions: (el) => {
       const l = currentDetail;
-      if (l) openExternal(`https://www.google.com/maps/dir/?api=1&destination=${l.latitude},${l.longitude}`);
+      if (!l) return;
+      const mode = el.dataset.mode === "walking" ? "walking" : "driving";
+      // Free turn-by-turn navigation in the Google Maps app (or browser); no API key involved.
+      openExternal(`https://www.google.com/maps/dir/?api=1&destination=${l.latitude},${l.longitude}&travelmode=${mode}`);
+    },
+    detailDistance: async () => {
+      const l = currentDetail;
+      if (!l) return;
+      const el = $("#detailDistance");
+      el.innerHTML = `<span class="spinner dark" style="width:16px;height:16px"></span> <span class="muted">Getting your location…</span>`;
+      try {
+        const { getMyLocation } = await import("./map.js");
+        state.myLocation = await getMyLocation();
+        showDistance(l, state.myLocation);
+      } catch (e) {
+        el.innerHTML = `<span class="muted">${esc(e.message)}</span>`;
+      }
+    },
+    viewOnMap: async () => {
+      const l = currentDetail;
+      if (!l) return;
+      const { focusOnMap } = await import("./map.js");
+      focusOnMap(l);
     },
     shareListing: async () => {
       const l = currentDetail;

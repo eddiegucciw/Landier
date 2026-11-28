@@ -11,7 +11,29 @@ export const firebaseConfig = {
   measurementId: "G-P9B3XKTYDS"
 };
 
-export const APP_VERSION = "1.0.0";
+// ---------- Maps (all free, no API keys) ----------
+// Every URL below can be pointed at your own self-hosted server later without code changes.
+export const MAP_CONFIG = {
+  // OpenStreetMap vector tiles + style with labels and 3D buildings (OpenFreeMap: free, no key,
+  // commercial use allowed; self-hostable: https://openfreemap.org).
+  styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+  // Elevation tiles (Terrarium encoding) from the AWS Open Data "Terrain Tiles" dataset
+  // (SRTM/GMTED and other public DEMs). Swap for self-hosted Copernicus DEM tiles if needed.
+  terrainTiles: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+  terrainAttribution: "Elevation: AWS Terrain Tiles (SRTM, GMTED and others)",
+  // Sentinel-2 cloudless 2016 mosaic by EOX (CC BY 4.0, ~10 m per pixel, sharp up to zoom ~13).
+  satelliteTiles: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg",
+  satelliteMaxZoom: 14,
+  satelliteAttribution: '<a href="https://s2maps.eu">Sentinel-2 cloudless</a> by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016)',
+  // Place search: any Nominatim-compatible endpoint. The public one is for light use only;
+  // run your own (https://nominatim.org) or use a hosted provider as traffic grows.
+  geocoderUrl: "https://nominatim.openstreetmap.org/search",
+  // Optional in-app route display: an OSRM-compatible routing server, e.g.
+  // "https://your-osrm.example.com". Leave empty to open turn-by-turn directions in Google Maps.
+  routingUrl: ""
+};
+
+export const APP_VERSION = "1.1.0";
 export const SUPPORT_EMAIL = "support@landier.co.ke";
 
 export const MAX_PHOTOS = 6;

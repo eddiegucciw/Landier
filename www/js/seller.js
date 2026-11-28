@@ -1,6 +1,6 @@
 // seller.js — create/edit listings (photos + map location), My listings, sold/relist/delete.
 import {
-  auth, db, collection, doc, getDocs, setDoc, updateDoc, writeBatch, where, serverTimestamp
+  auth, db, collection, doc, getDocs, setDoc, updateDoc, writeBatch, where, serverTimestamp, deleteField
 } from "./firebase.js";
 import { state, cacheListing } from "./state.js";
 import {
@@ -12,7 +12,7 @@ import {
   fromSnap, fetchListing, queryWithFallback, byNewest, STATUS_LABEL, emptyState,
   listingLocation, openDetail, loadListings, renderHome
 } from "./listings.js";
-import { createPicker } from "./map.js";
+import { createPicker, formatArea } from "./map.js";
 import { refreshVerification, resendVerification } from "./auth.js";
 
 // ---------- Image processing ----------
@@ -60,6 +60,7 @@ let photos = [];          // [{ data }]
 let photosDirty = false;
 let picker = null;
 let location = null;
+let boundary = { points: [], area: 0, error: null };
 
 function fillSelect(sel, items, placeholder) {
   sel.innerHTML = (placeholder ? `<option value="">${esc(placeholder)}</option>` : "") +
@@ -88,6 +89,9 @@ export async function openListingForm(listing = null) {
   photos = [];
   photosDirty = false;
   location = listing && Number.isFinite(listing.latitude) ? { lat: listing.latitude, lng: listing.longitude } : null;
+  boundary = { points: (listing?.boundary?.points || []).slice(), area: listing?.boundary?.areaSqm || 0, error: null };
+  setPickerMode("pin");
+  renderBoundaryInfo();
 
   const f = $("#listingForm");
   f.reset();
@@ -122,12 +126,39 @@ export async function openListingForm(listing = null) {
   }
 
   // Fresh map each time (the container is re-used).
+  picker?.destroy?.();
   $("#pickerMap").innerHTML = "";
   picker = await createPicker($("#pickerMap"), location, (pos) => {
     location = pos;
     setCoordsLabel();
     $("#pickerMap").closest(".fg").classList.remove("invalid");
+  }, {
+    boundary: boundary.points,
+    modesEl: $("#pickerModes"),
+    onBoundary: (points, area, error) => {
+      boundary = { points, area, error };
+      renderBoundaryInfo();
+    }
   });
+}
+
+function setPickerMode(mode) {
+  document.querySelectorAll("#pickerSeg [data-mode]").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+  $("#boundaryTools").hidden = mode !== "boundary";
+  $("#pickerHint").textContent = mode === "boundary"
+    ? "Tap each corner of the land in order. Switch to satellite to see the plot."
+    : "Tap the map or drag the pin to the land's position.";
+  picker?.setMode?.(mode);
+}
+
+function renderBoundaryInfo() {
+  const n = boundary.points.length;
+  $("#boundaryArea").textContent = n >= 3 && boundary.area
+    ? `${n} points · ≈ ${formatArea(boundary.area)}`
+    : n ? `${n} point${n === 1 ? "" : "s"} — add ${3 - n} more` : "No boundary";
+  const err = $("#boundaryError");
+  err.hidden = !boundary.error || n < 3;
+  err.textContent = boundary.error || "";
 }
 
 function validate(f) {
@@ -149,6 +180,7 @@ function validate(f) {
   if (!photos.length) errors.push("Add at least one photo");
   $("#pickerMap").closest(".fg").classList.toggle("invalid", !location);
   if (!location) errors.push("Set the land's location on the map");
+  if (boundary.points.length && boundary.error) errors.push("Boundary: " + boundary.error);
   return errors;
 }
 
@@ -204,6 +236,7 @@ async function submitListing(e) {
       description: f.description.value.trim(),
       latitude: location.lat,
       longitude: location.lng,
+      ...boundaryField(),
       sellerName: state.profile.fullName || state.user.displayName || "Seller",
       sellerPhone: state.profile.phone,
       coverThumb,
@@ -237,6 +270,7 @@ async function submitListing(e) {
       }
     }
 
+    if (data.boundary && !Array.isArray(data.boundary.points)) data.boundary = null;
     cacheListing({ ...(editing || {}), ...data, id: ref.id, sellerId: state.user.uid, createdAt: editing?.createdAt || { seconds: Date.now() / 1000 } });
     closeOverlay();
     if (state.isAdmin) {
@@ -255,6 +289,18 @@ async function submitListing(e) {
   } finally {
     setBusy(btn, false);
   }
+}
+
+// Boundary is optional. Saved as {points:[{lat,lng}], areaSqm} (Firestore has no nested arrays;
+// map.js converts it to a GeoJSON Polygon for display).
+function boundaryField() {
+  if (boundary.points.length >= 3 && !boundary.error) {
+    return { boundary: {
+      points: boundary.points.map((p) => ({ lat: Math.round(p.lat * 1e6) / 1e6, lng: Math.round(p.lng * 1e6) / 1e6 })),
+      areaSqm: Math.round(boundary.area)
+    } };
+  }
+  return editing?.boundary ? { boundary: deleteField() } : {};
 }
 
 // ---------- My listings ----------
@@ -368,7 +414,7 @@ export function initSeller() {
     if (e.key === "Enter") { e.preventDefault(); $("[data-action=pickerSearch]").click(); }
   });
 
-  onOverlayClose("ov-form", () => { picker = null; });
+  onOverlayClose("ov-form", () => { picker?.destroy?.(); picker = null; });
 
   registerActions({
     newListing: () => openListingForm(null),
@@ -389,6 +435,12 @@ export function initSeller() {
       photosDirty = true;
       renderThumbs();
       toast("Cover photo updated", "success");
+    },
+    pickerMode: (el) => setPickerMode(el.dataset.mode),
+    boundaryUndo: () => picker?.undo?.(),
+    boundaryClear: async () => {
+      if (!boundary.points.length) return;
+      if (await confirmDialog({ title: "Clear boundary?", message: "All boundary points will be removed.", confirmText: "Clear" })) picker?.clear?.();
     },
     pickerSearch: async () => {
       const q = $("#pickerSearch").value.trim();

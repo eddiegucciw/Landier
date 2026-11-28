@@ -8,8 +8,11 @@ import {
 import {
   initializeFirestore, persistentLocalCache, collection, doc, getDoc, getDocs, setDoc, addDoc,
   updateDoc, deleteDoc, query, where, orderBy, limit, limitToLast, onSnapshot, serverTimestamp,
-  writeBatch, Timestamp
+  writeBatch, Timestamp, deleteField
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {
+  getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
 import { firebaseConfig } from "./config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -24,11 +27,13 @@ try {
   firestore = initializeFirestore(app, {});
 }
 export const db = firestore;
+export const storage = getStorage(app);
 
 export {
   onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   sendPasswordResetEmail, sendEmailVerification, updateProfile, updatePassword,
   reauthenticateWithCredential, EmailAuthProvider, deleteUser, reload,
   collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, where,
-  orderBy, limit, limitToLast, onSnapshot, serverTimestamp, writeBatch, Timestamp
+  orderBy, limit, limitToLast, onSnapshot, serverTimestamp, writeBatch, Timestamp, deleteField,
+  storageRef, uploadBytesResumable, getDownloadURL, deleteObject
 };

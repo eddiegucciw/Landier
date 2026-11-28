@@ -9,6 +9,7 @@ export const state = {
   listingById: new Map(),
   saved: new Set(),    // ids of saved listings
   conversations: [],
+  myLocation: null,    // last known GPS position (only kept in memory)
   filters: { category: "All", search: "", minPrice: null, maxPrice: null, county: "", sort: "newest" },
   unsubscribers: []    // Firestore listeners to stop on sign-out
 };

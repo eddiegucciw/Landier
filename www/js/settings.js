@@ -10,6 +10,8 @@ import {
 } from "./ui.js";
 import { APP_VERSION, SUPPORT_EMAIL } from "./config.js";
 import { fetchMyListings, deleteListingById } from "./seller.js";
+import { savePublicProfile } from "./profiles.js";
+import { deleteAvatarFile } from "./avatar.js";
 
 export function openSettings() {
   const f = $("#profileForm");
@@ -40,6 +42,7 @@ export function initSettings() {
       await setDoc(doc(db, "users", state.user.uid), { fullName, phone, email: auth.currentUser.email, updatedAt: serverTimestamp() }, { merge: true });
       await updateProfile(auth.currentUser, { displayName: fullName });
       Object.assign(state.profile, { fullName, phone });
+      await savePublicProfile(state.user.uid, { fullName, photoURL: state.profile.photoURL });
       // Keep contact details on existing listings in sync.
       const mine = await fetchMyListings().catch(() => []);
       const stale = mine.filter((l) => l.sellerName !== fullName || l.sellerPhone !== phone);
@@ -107,6 +110,8 @@ export function initSettings() {
         for (const l of mine) await deleteListingById(l.id);
         const saved = await getDocs(collection(db, "users", uid, "saved"));
         for (const d of saved.docs) await deleteDoc(d.ref);
+        await deleteAvatarFile();
+        try { await deleteDoc(doc(db, "profiles", uid)); } catch (_) {}
         await deleteDoc(doc(db, "users", uid));
         await deleteUser(auth.currentUser);
         toast("Your account has been deleted", "success");
